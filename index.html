@@ -1,0 +1,3010 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎪 セトリ＆プロンプ作成君</title>
+  <script src="https://cdn.jsdelivr.net/npm/pptxgenjs/dist/pptxgen.bundle.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Serif+JP:wght@400;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ═══ RESET & TOKENS ═══ */
+    *{box-sizing:border-box;margin:0;padding:0;}
+    :root{
+      --bg:#080c1a; --bg2:#0c1020; --bg3:#101428; --bg4:#151a30; --bg5:#1a2038;
+      --border:#1c2138; --border2:#242a48; --border3:#2e3560;
+      --accent:#c9a84c; --accent2:#e2c97e; --accent3:#a88838;
+      --gold:#c9a84c; --gold-glow:rgba(201,168,76,.18);
+      --text:#e4e2d8; --text2:#8a8a9a; --muted:#50506a; --faint:#1e2040;
+      --song:#5eab7a; --song-d:#3d8a5c; --song-bg:rgba(94,171,122,.07);
+      --mc:#c9a84c;   --mc-d:#a88838;   --mc-bg:rgba(201,168,76,.07);
+      --video:#5090b0;--video-d:#3878a0;--video-bg:rgba(80,144,176,.07);
+      --red:#e06060;  --red-bg:rgba(220,90,90,.07);
+      --r:4px; --r-sm:3px; --r-lg:6px;
+    }
+    /* 微細ノイズテクスチャ */
+    body::before{
+      content:'';position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.025;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      background-size:200px 200px;
+    }
+    body{
+      font-family:'Hiragino Sans','Hiragino Kaku Gothic ProN','Meiryo','Noto Sans JP',sans-serif;
+      background:var(--bg);color:var(--text);
+      height:100vh;display:flex;flex-direction:column;overflow:hidden;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* ═══ HEADER ═══ */
+    header{
+      background:var(--bg2);
+      border-bottom:1px solid var(--border);
+      padding:8px 14px;
+      display:flex;align-items:center;gap:10px;flex-shrink:0;
+    }
+    .logo{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+    .logo-icon{
+      width:28px;height:28px;flex-shrink:0;
+      background:#0c1020;
+      border:1px solid var(--accent3);
+      border-radius:3px;display:flex;align-items:center;justify-content:center;
+      font-size:14px;
+    }
+    .logo-text{
+      font-family:'Bebas Neue',sans-serif;
+      font-size:16px;letter-spacing:.1em;
+      color:var(--accent);white-space:nowrap;
+    }
+    .show-input{
+      flex:1;min-width:0;
+      background:rgba(255,255,255,.035);
+      border:1px solid rgba(255,255,255,.07);
+      border-radius:var(--r-sm);
+      color:var(--text);padding:7px 13px;
+      font-size:14px;font-weight:600;outline:none;font-family:inherit;
+      transition:border-color .15s,background .15s,box-shadow .15s;
+    }
+    .show-input:focus{
+      border-color:var(--accent);background:rgba(201,168,76,.04);
+      box-shadow:0 0 0 3px rgba(201,168,76,.1);
+    }
+    .show-input::placeholder{color:var(--faint);}
+    .hbtns{display:flex;gap:5px;flex-shrink:0;align-items:center;}
+    .hbtn-sep{width:1px;height:20px;background:var(--border2);margin:0 2px;flex-shrink:0;}
+    .hbtn{
+      background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+      border-radius:var(--r-sm);color:var(--text2);
+      padding:6px 11px;font-size:11px;font-weight:600;
+      cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap;
+    }
+    .hbtn:hover{background:rgba(255,255,255,.1);color:var(--text);border-color:rgba(255,255,255,.14);}
+    .hbtn.share{
+      background:rgba(94,171,122,.08);border-color:rgba(94,171,122,.22);color:var(--song);
+    }
+    .hbtn.share:hover{background:rgba(94,171,122,.16);border-color:var(--song);}
+    .hbtn.load{
+      background:rgba(80,144,176,.08);border-color:rgba(80,144,176,.22);color:var(--video);
+    }
+    .hbtn.load:hover{background:rgba(80,144,176,.16);border-color:var(--video);}
+    .hbtn.primary{
+      background:var(--accent);border:1px solid var(--accent3);
+      color:#0a0c14;padding:7px 16px;font-size:12px;font-weight:800;
+      letter-spacing:.05em;
+    }
+    .hbtn.primary:hover{background:var(--accent2);border-color:var(--accent);}
+    .hbtn:disabled{opacity:.4;cursor:not-allowed;transform:none!important;}
+
+    /* ═══ LAYOUT ═══ */
+    .main{display:flex;flex:1;overflow:hidden;}
+
+    /* ═══ SETLIST PANEL ═══ */
+    .sl-panel{
+      width:300px;min-width:300px;background:var(--bg2);
+      border-right:1px solid var(--border);
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .sl-top{
+      padding:9px 10px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;gap:6px;flex-shrink:0;
+    }
+    .sl-label{font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);flex:1;}
+    .add-grp{display:flex;gap:3px;}
+    .add-type-btn{
+      background:transparent;border:1px solid var(--border2);
+      border-radius:var(--r-sm);font-size:11px;font-weight:700;letter-spacing:.02em;
+      padding:5px 10px;cursor:pointer;transition:all .14s;font-family:inherit;
+    }
+    .add-type-btn.s{color:var(--song);}
+    .add-type-btn.m{color:var(--mc);}
+    .add-type-btn.v{color:var(--video);}
+    .add-type-btn:hover{border-color:currentColor;background:rgba(255,255,255,.05);}
+
+    .sl-list{flex:1;overflow-y:auto;padding:5px;}
+    .sl-empty{
+      text-align:center;color:var(--faint);
+      padding:40px 14px;font-size:12px;line-height:2.2;
+    }
+
+    /* ── Setlist item card ── */
+    .sl-item{
+      display:flex;align-items:flex-start;gap:6px;
+      background:var(--bg3);
+      border:1px solid var(--border);
+      border-left:3px solid transparent;
+      border-radius:var(--r);
+      padding:9px 9px 9px 7px;
+      margin-bottom:4px;cursor:pointer;
+      transition:background .12s,border-color .12s,box-shadow .12s;
+      user-select:none;
+    }
+    .sl-item:hover{background:var(--bg4);border-color:var(--border2);}
+    .sl-item.sel{
+      background:rgba(201,168,76,.06);
+      border-color:rgba(201,168,76,.3)!important;
+      border-left-color:var(--accent)!important;
+    }
+    .sl-item.dover{border-color:var(--accent);background:rgba(201,168,76,.05);}
+    .sl-item.dragging{opacity:.3;}
+    .sl-item.type-song{border-left-color:var(--song);}
+    .sl-item.type-mc{border-left-color:var(--mc);}
+    .sl-item.type-video{border-left-color:var(--video);}
+
+    .drag-h{color:var(--faint);font-size:12px;cursor:grab;flex-shrink:0;padding-top:3px;line-height:1;}
+    .drag-h:active{cursor:grabbing;}
+    .type-icon{font-size:13px;flex-shrink:0;padding-top:2px;}
+
+    .item-info{flex:1;min-width:0;}
+    .item-num{
+      font-size:9px;color:var(--muted);font-weight:700;
+      letter-spacing:.1em;text-transform:uppercase;
+    }
+    .item-ttl{
+      font-size:13px;font-weight:700;margin-top:2px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .item-ttl.s{color:#7ecda0;} .item-ttl.m{color:var(--accent2);} .item-ttl.v{color:#6aaac8;}
+    .item-cue{
+      font-size:10px;color:var(--accent);margin-top:3px;font-weight:600;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.8;
+    }
+    .item-cue.danger{color:var(--red);}
+
+    .item-tc{text-align:right;flex-shrink:0;padding-top:1px;}
+    .tc-start{font-size:9px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums;}
+    .tc-dur{font-size:12px;font-weight:600;color:var(--text2);font-variant-numeric:tabular-nums;margin-top:3px;}
+    .item-acts{display:flex;flex-direction:column;gap:1px;flex-shrink:0;padding-top:2px;}
+    .ia{
+      background:none;border:none;color:var(--faint);font-size:10px;
+      cursor:pointer;padding:2px 4px;line-height:1.2;
+      transition:all .1s;border-radius:4px;
+    }
+    .ia:hover{color:var(--text2);background:rgba(255,255,255,.06);}
+    .ia.del:hover{color:var(--red);background:rgba(248,113,113,.08);}
+
+    .sl-foot{
+      padding:8px 12px;border-top:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+    }
+    .total-t{font-size:11px;color:var(--muted);}
+    .total-t span{color:var(--text);font-weight:700;font-variant-numeric:tabular-nums;}
+    .saved-badge{font-size:10px;color:var(--muted);opacity:0;transition:opacity .4s;pointer-events:none;}
+
+    /* ── Trash zone ── */
+    .trash-zone{
+      display:none;margin:0 6px 6px;flex-shrink:0;
+      border:1.5px dashed rgba(248,113,113,.28);border-radius:var(--r);
+      padding:10px;text-align:center;color:rgba(248,113,113,.4);
+      font-size:11px;font-weight:600;letter-spacing:.03em;
+      transition:all .16s;user-select:none;
+    }
+    .trash-zone .trash-icon{font-size:16px;display:block;margin-bottom:3px;transition:transform .16s;}
+    .trash-zone.visible{display:block;}
+    .trash-zone.over{
+      background:rgba(248,113,113,.07);border-color:var(--red);border-style:solid;
+      color:var(--red);box-shadow:inset 0 0 20px rgba(248,113,113,.07);
+    }
+    .trash-zone.over .trash-icon{transform:scale(1.2) rotate(-10deg);}
+
+    /* ═══ EDITOR PANEL ═══ */
+    .ed-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+    .ed-scroll{flex:1;overflow-y:auto;padding:22px 26px 36px;}
+    .ed-empty{
+      flex:1;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;
+      color:var(--faint);gap:12px;
+    }
+    .ed-empty-icon{font-size:38px;opacity:.22;}
+    .ed-empty-text{font-size:13px;line-height:1.8;text-align:center;}
+
+    /* Editor header */
+    .ed-hd{
+      display:flex;align-items:center;gap:10px;
+      margin-bottom:20px;padding-bottom:16px;
+      border-bottom:1px solid var(--border);
+    }
+    .type-badge{
+      font-size:10px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;
+      padding:4px 10px;border-radius:3px;flex-shrink:0;
+    }
+    .type-badge.s{background:var(--song-bg);color:var(--song);}
+    .type-badge.m{background:var(--mc-bg);color:var(--mc);}
+    .type-badge.v{background:var(--video-bg);color:var(--video);}
+    .ed-title-text{font-size:16px;font-weight:800;letter-spacing:-.01em;}
+
+    /* Form rows */
+    .frow{margin-bottom:14px;}
+    .frow:last-child{margin-bottom:0;}
+    .frow label{
+      display:block;font-size:10px;color:var(--muted);
+      font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;
+    }
+    .inp{
+      background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);
+      color:var(--text);padding:9px 12px;font-size:14px;width:100%;
+      outline:none;font-family:inherit;
+      transition:border-color .14s,box-shadow .14s;
+    }
+    .inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,76,.12);}
+    .sel-inp{
+      background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r-sm);
+      color:var(--text);padding:9px 12px;font-size:14px;
+      outline:none;cursor:pointer;font-family:inherit;
+    }
+
+    /* Duration row */
+    .dur-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .file-btn{
+      background:rgba(201,168,76,.06);border:1px dashed rgba(201,168,76,.25);
+      border-radius:var(--r-sm);color:var(--accent2);
+      padding:8px 12px;font-size:12px;cursor:pointer;
+      transition:all .14s;font-family:inherit;
+      display:flex;align-items:center;gap:5px;white-space:nowrap;
+    }
+    .file-btn:hover{background:rgba(201,168,76,.14);border-color:var(--accent);}
+    .dur-manual{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);}
+    .dur-n{
+      width:50px;background:var(--bg3);border:1px solid var(--border2);
+      border-radius:var(--r-sm);color:var(--text);
+      padding:8px 6px;font-size:14px;text-align:center;
+      outline:none;font-variant-numeric:tabular-nums;
+      transition:border-color .14s;font-family:inherit;
+    }
+    .dur-n:focus{border-color:var(--accent);}
+    .dur-tag{
+      font-size:10px;color:var(--song);font-weight:700;
+      padding:3px 9px;background:var(--song-bg);border-radius:3px;white-space:nowrap;
+    }
+
+    /* Textarea */
+    .txt-area{
+      width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--r);
+      color:#c8c8e8;font-size:15px;line-height:2;
+      padding:14px 16px;resize:vertical;outline:none;min-height:240px;
+      font-family:'SF Mono','Consolas','Hiragino Kaku Gothic ProN',monospace;
+      caret-color:var(--accent);
+      transition:border-color .14s,box-shadow .14s;
+    }
+    .txt-area:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(201,168,76,.1);}
+    .txt-area::placeholder{color:var(--faint);}
+
+    /* Checkbox */
+    .cb-row{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);cursor:pointer;}
+    .cb-row input{accent-color:var(--accent);width:15px;height:15px;cursor:pointer;}
+
+    /* Action button */
+    .act-btn{
+      background:rgba(201,168,76,.06);border:1px solid rgba(201,168,76,.2);border-radius:var(--r);
+      color:var(--accent2);padding:10px 20px;font-size:13px;font-weight:600;
+      cursor:pointer;transition:all .14s;font-family:inherit;
+    }
+    .act-btn:hover{background:rgba(201,168,76,.14);border-color:var(--accent);color:var(--accent);}
+
+    /* Divider */
+    .div{border:none;border-top:1px solid var(--border);margin:18px 0;}
+
+    /* Hint */
+    .hint{font-size:11px;color:var(--faint);line-height:1.7;}
+    .hint code{color:var(--accent2);font-size:10.5px;background:rgba(201,168,76,.1);border-radius:3px;padding:0 4px;}
+
+    /* ── キッカケ / 入りハケ blocks ── */
+    .cue-block{
+      background:rgba(201,168,76,.05);border:1px solid rgba(201,168,76,.14);
+      border-radius:var(--r);padding:13px 15px;margin-bottom:14px;
+    }
+    .cue-block.danger{background:var(--red-bg);border-color:rgba(248,113,113,.16);}
+    .cue-hd{
+      font-size:9px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px;
+    }
+    .cue-hd.purple{color:var(--accent2);}
+    .cue-hd.red{color:var(--red);}
+    .radio-grp{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+    .radio-opt{
+      display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);
+      background:var(--bg3);border:1px solid var(--border2);
+      border-radius:var(--r-sm);padding:6px 11px;cursor:pointer;
+      transition:all .13s;user-select:none;
+    }
+    .radio-opt:has(input:checked){background:rgba(201,168,76,.1);border-color:var(--accent);color:var(--accent2);}
+    .radio-opt input[type=radio]{accent-color:var(--accent);cursor:pointer;width:12px;height:12px;}
+    .ee-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    .ee-label{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin-bottom:4px;}
+    .ee-entry{color:var(--accent2);} .ee-exit{color:var(--red);}
+
+    /* ── 出演者クイック挿入 ── */
+    .perf-ins-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;}
+    .perf-ins-lbl{
+      font-size:9px;color:var(--muted);font-weight:800;
+      letter-spacing:.1em;text-transform:uppercase;margin-right:2px;
+    }
+    .perf-ins-btn{
+      background:transparent;border:1.5px solid;border-radius:var(--r-sm);
+      font-size:11px;font-weight:700;padding:4px 13px;
+      cursor:pointer;transition:opacity .13s,transform .1s;font-family:inherit;white-space:nowrap;
+    }
+    .perf-ins-btn:hover{opacity:.7;transform:scale(1.04);}
+    .perf-ins-clear{
+      background:transparent;border:1px solid var(--border2);border-radius:var(--r-sm);
+      font-size:10px;font-weight:600;padding:4px 10px;
+      cursor:pointer;color:var(--muted);transition:all .13s;font-family:inherit;
+    }
+    .perf-ins-clear:hover{border-color:var(--red);color:var(--red);}
+
+    /* ── Performer settings ── */
+    .perf-row{
+      display:flex;align-items:center;gap:8px;
+      background:var(--bg3);border:1px solid var(--border2);
+      border-radius:var(--r-sm);padding:7px 10px;margin-bottom:5px;
+      transition:border-color .13s;
+    }
+    .perf-row:hover{border-color:var(--border3);}
+    .swatch{width:20px;height:20px;border-radius:50%;border:2px solid rgba(255,255,255,.12);cursor:pointer;flex-shrink:0;transition:transform .13s;}
+    .swatch:hover{transform:scale(1.18);}
+    .pname{flex:1;background:transparent;border:none;color:var(--text);font-size:13px;outline:none;font-family:inherit;}
+    .pname::placeholder{color:var(--faint);}
+    .rm{background:none;border:none;color:var(--faint);font-size:18px;cursor:pointer;padding:0;line-height:1;transition:color .12s;}
+    .rm:hover{color:var(--red);}
+    .hl-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:4px;color:var(--muted);font-size:11px;font-weight:700;cursor:pointer;padding:2px 6px;letter-spacing:.02em;transition:all .15s;white-space:nowrap;}
+    .hl-btn:hover{border-color:rgba(255,255,255,.25);}
+    .hl-btn.on{background:rgba(253,224,71,.18);border-color:rgba(253,224,71,.55);color:#fde047;}
+    .add-p-btn{
+      width:100%;background:transparent;border:1px dashed var(--border3);border-radius:var(--r-sm);
+      color:var(--accent);font-size:12px;font-weight:600;padding:8px;
+      cursor:pointer;transition:all .13s;font-family:inherit;
+    }
+    .add-p-btn:hover{background:var(--bg3);border-color:var(--accent);}
+    .s-heading{font-size:14px;font-weight:800;color:var(--text);margin-bottom:14px;font-family:'Noto Serif JP',serif;letter-spacing:.04em;}
+    .slide-cnt{font-size:11px;color:var(--muted);}
+
+    /* ── Lyrics line length warning ── */
+    .lyrics-warn{
+      margin-top:6px;padding:8px 12px;border-radius:var(--r-sm);
+      background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.18);
+      font-size:11px;color:var(--mc);line-height:1.7;
+    }
+    .lyrics-warn .lw-line{color:var(--red);font-weight:700;}
+    .lyrics-warn .lw-ok{color:var(--song);font-size:10px;font-weight:600;}
+
+    /* ── Timer button ── */
+    .timer-btn{
+      background:rgba(251,146,60,.07);border:1px solid rgba(251,146,60,.2);
+      border-radius:var(--r-sm);color:var(--mc);
+      font-size:12px;font-weight:700;padding:8px 12px;
+      cursor:pointer;transition:all .14s;font-family:inherit;white-space:nowrap;
+    }
+    .timer-btn:hover{background:rgba(251,146,60,.16);border-color:var(--mc);}
+
+    /* ── Toast ── */
+    .toast{
+      position:fixed;bottom:16px;right:16px;
+      background:#22c55e;color:#fff;
+      padding:9px 16px;border-radius:var(--r);
+      font-size:12px;font-weight:600;
+      opacity:0;transform:translateY(6px);transition:all .2s;
+      z-index:9999;pointer-events:none;
+      box-shadow:0 4px 20px rgba(0,0,0,.4);
+    }
+    .toast.show{opacity:1;transform:translateY(0);}
+    .toast.err{background:#ef4444;}
+
+    /* Scrollbar */
+    ::-webkit-scrollbar{width:4px;}
+    ::-webkit-scrollbar-track{background:transparent;}
+    ::-webkit-scrollbar-thumb{background:#1e1e46;border-radius:2px;}
+    ::-webkit-scrollbar-thumb:hover{background:#2e2e66;}
+
+    /* Two-col */
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    @media(max-width:900px){.two-col{grid-template-columns:1fr;}}
+
+    /* ── Footer ── */
+    .app-footer{
+      flex-shrink:0;
+      background:var(--bg2);
+      border-top:1px solid var(--border);
+      padding:5px 16px;
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      flex-wrap:wrap;
+    }
+    .footer-credit{
+      display:flex;align-items:center;gap:6px;
+      font-size:10px;color:var(--muted);
+    }
+    .footer-credit a{
+      color:var(--accent2);text-decoration:none;font-weight:600;
+      transition:color .13s;
+    }
+    .footer-credit a:hover{color:var(--accent);}
+    .footer-sep{width:1px;height:10px;background:var(--border2);}
+    .footer-ai{
+      font-size:10px;color:var(--muted);
+      display:flex;align-items:center;gap:5px;
+    }
+    .footer-badge{
+      display:inline-flex;align-items:center;gap:4px;
+      background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.18);
+      border-radius:3px;padding:2px 8px;
+      font-size:9px;font-weight:700;letter-spacing:.04em;color:var(--accent2);
+    }
+    .footer-warn{
+      font-size:9px;color:#4a4a72;
+      display:flex;align-items:center;gap:4px;
+    }
+
+    /* ── Help modal ── */
+    #helpModal{
+      display:none;position:fixed;inset:0;z-index:9500;
+      background:rgba(3,3,18,.82);backdrop-filter:blur(6px);
+      align-items:center;justify-content:center;
+    }
+    #helpModal.open{display:flex;}
+    .help-box{
+      width:min(720px,calc(100vw - 32px));
+      max-height:calc(100vh - 48px);
+      background:var(--bg2);
+      border:1px solid var(--border2);border-radius:var(--r-lg);
+      overflow:hidden;display:flex;flex-direction:column;
+      box-shadow:0 24px 64px rgba(0,0,0,.8);
+    }
+    .help-head{
+      padding:18px 22px 14px;border-bottom:1px solid var(--border);
+      display:flex;align-items:center;gap:12px;flex-shrink:0;
+    }
+    .help-head-icon{
+      width:36px;height:36px;border-radius:var(--r-sm);flex-shrink:0;
+      background:rgba(201,168,76,.12);border:1px solid rgba(201,168,76,.3);
+      display:flex;align-items:center;justify-content:center;
+      font-size:18px;
+    }
+    .help-head-title{font-size:17px;font-weight:800;letter-spacing:-.01em;}
+    .help-head-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+    .help-close{
+      margin-left:auto;background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);border-radius:6px;
+      color:var(--muted);padding:5px 12px;font-size:12px;
+      cursor:pointer;font-family:inherit;transition:all .14s;
+    }
+    .help-close:hover{background:rgba(248,113,113,.12);border-color:var(--red);color:var(--red);}
+    .help-body{overflow-y:auto;padding:20px 22px 24px;}
+    .help-steps{display:flex;flex-direction:column;gap:10px;}
+    .help-step{
+      display:flex;gap:14px;align-items:flex-start;
+      background:var(--bg3);border:1px solid var(--border);
+      border-radius:var(--r);padding:13px 16px;
+      transition:border-color .14s;
+    }
+    .help-step:hover{border-color:var(--border2);}
+    .step-num{
+      width:28px;height:28px;border-radius:50%;flex-shrink:0;
+      display:flex;align-items:center;justify-content:center;
+      font-size:12px;font-weight:800;color:#fff;
+    }
+    .step-body{flex:1;min-width:0;}
+    .step-title{font-size:13px;font-weight:800;margin-bottom:3px;}
+    .step-desc{font-size:11px;color:var(--text2);line-height:1.75;}
+    .step-desc code{
+      background:rgba(201,168,76,.12);border-radius:3px;
+      padding:1px 5px;font-size:10.5px;color:var(--accent2);
+    }
+    .step-tip{
+      margin-top:6px;font-size:10px;color:var(--muted);
+      background:rgba(201,168,76,.04);border-radius:var(--r-sm);
+      padding:5px 9px;border-left:2px solid rgba(201,168,76,.3);
+    }
+    .help-section-label{
+      font-size:9px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;
+      color:var(--muted);margin:16px 0 8px;padding-left:2px;
+    }
+    .help-shortcuts{
+      display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px;
+    }
+    .shortcut-item{
+      display:flex;align-items:center;gap:8px;
+      background:var(--bg3);border:1px solid var(--border);
+      border-radius:var(--r-sm);padding:7px 10px;font-size:11px;
+    }
+    .shortcut-key{
+      background:var(--bg4);border:1px solid var(--border3);border-radius:3px;
+      padding:2px 7px;font-size:10px;font-weight:700;
+      color:var(--accent2);white-space:nowrap;flex-shrink:0;
+    }
+    .shortcut-title{
+      font-size:10px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+      color:var(--muted);margin-bottom:8px;
+    }
+    .shortcut-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+    .help-shortcuts{margin-top:18px;background:var(--bg3);border:1px solid var(--border);
+      border-radius:var(--r);padding:13px 16px;}
+    .help-footer{
+      padding:13px 22px 14px;border-top:1px solid var(--border);
+      display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+      background:rgba(255,255,255,.015);
+    }
+    .help-footer span{font-size:10px;color:var(--muted);}
+    .help-footer a{color:var(--accent2);text-decoration:none;}
+    .btn-help-close{
+      background:var(--accent);
+      border:1px solid var(--accent3);border-radius:var(--r-sm);
+      color:#0a0c14;font-size:12px;font-weight:800;
+      padding:8px 20px;cursor:pointer;font-family:inherit;
+      letter-spacing:.04em;
+      transition:background .14s;
+    }
+    .btn-help-close:hover{background:var(--accent2);}
+    .help-step:nth-child(1) .step-num{background:#c9584c;}
+    .help-step:nth-child(2) .step-num{background:#b07c30;}
+    .help-step:nth-child(3) .step-num{background:#3d8a5c;}
+    .help-step:nth-child(4) .step-num{background:#3878a0;}
+    .help-step:nth-child(5) .step-num{background:#5a3878;}
+    .help-step:nth-child(6) .step-num{background:#a87830;}
+
+    /* ── Preview button in editor header ── */
+    .prev-btn{
+      background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.22);
+      border-radius:var(--r-sm);color:var(--accent2);
+      font-size:11px;font-weight:700;padding:6px 12px;
+      cursor:pointer;transition:all .14s;font-family:inherit;white-space:nowrap;
+      margin-left:auto;
+    }
+    .prev-btn:hover{background:rgba(201,168,76,.18);border-color:var(--accent);}
+
+    /* ── Preview modal ── */
+    #previewModal{
+      display:none;position:fixed;inset:0;z-index:9000;
+      background:rgba(0,0,0,.88);
+      flex-direction:column;align-items:center;justify-content:center;gap:16px;
+    }
+    #previewModal.open{display:flex;}
+    .pv-header{
+      display:flex;align-items:center;gap:12px;width:100%;max-width:960px;
+      padding:0 10px;
+    }
+    .pv-title{font-size:13px;font-weight:700;color:var(--text2);flex:1;}
+    .pv-slide-count{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;}
+    .pv-close{
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+      border-radius:var(--r-sm);color:var(--text2);padding:5px 12px;
+      font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;
+      transition:all .14s;
+    }
+    .pv-close:hover{background:rgba(248,113,113,.15);border-color:var(--red);color:var(--red);}
+    .pv-nav{display:flex;align-items:center;gap:10px;}
+    .pv-arr{
+      background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+      border-radius:var(--r-sm);color:var(--text2);padding:5px 14px;
+      font-size:16px;cursor:pointer;font-family:inherit;transition:all .14s;
+      user-select:none;
+    }
+    .pv-arr:hover:not(:disabled){background:rgba(255,255,255,.12);color:var(--text);}
+    .pv-arr:disabled{opacity:.25;cursor:default;}
+
+    /* The 16:9 slide stage */
+    .pv-stage-wrap{
+      width:min(960px,calc(100vw - 40px));
+      aspect-ratio:16/9;
+      position:relative;
+      border-radius:var(--r-lg);
+      overflow:hidden;
+      box-shadow:0 8px 48px rgba(0,0,0,.8),0 0 0 1px rgba(255,255,255,.06);
+      container-type:size;
+    }
+    .pv-slide{
+      width:100%;height:100%;
+      position:relative;overflow:hidden;
+      background:#06061a;
+    }
+    /* Text elements inside preview use cqw/cqh */
+    .pv-el{
+      position:absolute;
+      display:flex;align-items:center;
+      line-height:1.4;
+      font-family:'Meiryo','Hiragino Sans',sans-serif;
+      overflow:hidden;
+    }
+    .pv-el.center{justify-content:center;text-align:center;}
+    .pv-el.left{justify-content:flex-start;text-align:left;}
+    .pv-el.right{justify-content:flex-end;text-align:right;}
+    .pv-el.wrap{white-space:pre-wrap;word-break:break-all;}
+    .pv-seqbar{
+      position:absolute;bottom:0;left:0;height:0.8%;
+      background:currentColor;border-radius:0 2px 2px 0;
+    }
+    .pv-hint{
+      font-size:11px;color:var(--muted);text-align:center;padding:0 10px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎪</div>
+    <span class="logo-text">セトリ＆プロンプ作成君</span><span style="font-size:10px;font-weight:700;color:var(--accent3);opacity:.8;margin-left:6px;letter-spacing:.08em;font-family:'Bebas Neue',sans-serif;">Ver 0.3</span>
+  </div>
+  <input id="showTitle" class="show-input" type="text" placeholder="公演名を入力…" oninput="saveState()">
+  <div class="hbtns">
+    <button class="hbtn" onclick="showHelp()">❓ 使い方</button>
+    <button class="hbtn" onclick="showSettings()">⚙️ 設定</button>
+    <div class="hbtn-sep"></div>
+    <button class="hbtn load" onclick="importProject()">📂 読み込み</button>
+    <button class="hbtn share" onclick="exportProject()">💾 共有・保存</button>
+    <div class="hbtn-sep"></div>
+    <button class="hbtn" onclick="generateExcel()">📊 Excel</button>
+    <button class="hbtn primary" id="exportBtn" onclick="generateFullPPTX()">✨ PPTX 生成</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ── Setlist Panel ── -->
+  <aside class="sl-panel">
+    <div class="sl-top">
+      <span class="sl-label">セットリスト</span>
+      <div class="add-grp">
+        <button class="add-type-btn s" onclick="addItem('song')">＋ 楽曲</button>
+        <button class="add-type-btn m" onclick="addItem('mc')">＋ MC</button>
+        <button class="add-type-btn v" onclick="addItem('video')">＋ 映像</button>
+      </div>
+    </div>
+    <div class="sl-list" id="slList"></div>
+
+    <!-- Trash drop zone (visible only while dragging) -->
+    <div class="trash-zone" id="trashZone"
+         ondragover="dOverTrash(event)"
+         ondragleave="dLeaveTrash(event)"
+         ondrop="dDropTrash(event)">
+      <span class="trash-icon">🗑️</span>
+      ここにドロップして削除
+    </div>
+
+    <div class="sl-foot">
+      <div class="total-t">合計時間: <span id="totalTime">0:00</span></div>
+      <span id="savedBadge" class="saved-badge">💾 保存済み</span>
+    </div>
+  </aside>
+
+  <!-- ── Editor Panel ── -->
+  <section class="ed-panel" id="edPanel">
+    <div class="ed-empty">
+      <div class="ed-empty-icon">🎬</div>
+      <div class="ed-empty-text">上のボタンから演目を追加してください</div>
+    </div>
+  </section>
+
+</div>
+
+<!-- ── Footer ── -->
+<footer class="app-footer">
+  <div class="footer-credit">
+    <span>制作</span>
+    <a href="https://x.com/isumiaki" target="_blank" rel="noopener">伊澄アキ</a>
+    <span class="footer-sep"></span>
+    <span class="footer-badge">🤖 Built with Claude</span>
+    <span class="footer-sep"></span>
+    <a href="https://isumiaki.booth.pm/" target="_blank" rel="noopener" style="opacity:.7;">☕ このツールが役立ったら BOOTH でサポート</a>
+  </div>
+  <div class="footer-warn">
+    <span style="opacity:.55;">⚠</span>
+    AI アシスト制作のため、まれに予期しない動作が発生することがあります。重要な公演での使用前にご確認ください。
+  </div>
+</footer>
+
+<!-- ── Help Modal ── -->
+<div id="helpModal" onclick="if(event.target===this)closeHelp()">
+  <div class="help-box">
+    <div class="help-head">
+      <span class="help-head-icon">🎪</span>
+      <div>
+        <div class="help-head-title">セトリ＆プロンプ作成君<br>使い方ガイド</div>
+        <div class="help-head-sub">はじめての方はここから！ステップに沿って進めるだけで本番スライドが完成✨</div>
+      </div>
+      <button class="help-close" onclick="closeHelp()">✕</button>
+    </div>
+    <div class="help-body">
+
+      <div class="help-step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">🎤 出演者を登録する</div>
+          <div class="step-desc">ヘッダーの「<b>⚙️ 設定</b>」ボタンを開き、「<b>出演者カラー設定</b>」から名前・カラーを入力して「＋ 出演者を追加」。グループ全員分を登録しておくと後で楽です！</div>
+          <div class="step-tip">💡 カラーは歌詞スライドの色分けに使われます。登録した名前を歌詞行頭に書くと自動で色付き表示に！</div>
+        </div>
+      </div>
+
+      <div class="help-step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">📋 セットリストを組み立てる</div>
+          <div class="step-desc">左パネル上部の「<b>＋ 楽曲</b>」「<b>＋ MC</b>」「<b>＋ 映像</b>」ボタンで項目を追加。カードをドラッグして順番を入れ替えられます。</div>
+          <div class="step-tip">💡 楽曲・MC・映像の3種類を組み合わせてOK。楽曲にはタイトルコール（曲名スライド）も設定できます！</div>
+        </div>
+      </div>
+
+      <div class="help-step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">✏️ 各項目を編集する</div>
+          <div class="step-desc">カードをクリックすると右パネルに編集画面が開きます。<b>楽曲</b>なら歌詞・担当・最大行数を入力。<b>MC</b>なら台本テキストを入力します。</div>
+          <div class="step-tip">💡 歌詞の各行先頭に「名前: 」と書くと担当者の色でスライドに反映されます（例：<code>アキ: きらきら輝く</code>）</div>
+        </div>
+      </div>
+
+      <div class="help-step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">👁️ プレビューで確認する</div>
+          <div class="step-desc">編集パネルの「<b>👁️ プレビュー</b>」ボタンでスライドの仕上がりを事前確認。思ったのと違ったらすぐ修正できます！</div>
+          <div class="step-tip">💡 フォントサイズは「⚙️ 設定」から変更できます</div>
+        </div>
+      </div>
+
+      <div class="help-step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="step-title">💾 プロジェクトを保存する</div>
+          <div class="step-desc">ヘッダーの「<b>💾 共有・保存</b>」で作業データをファイルに保存。次回は「<b>📂 読み込み</b>」で続きから再開できます。</div>
+          <div class="step-tip">💡 ブラウザを閉じても自動保存されますが、念のため定期的にファイル保存がおすすめです</div>
+        </div>
+      </div>
+
+      <div class="help-step">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="step-title">📊 本番ファイルを書き出す</div>
+          <div class="step-desc">ヘッダーの「<b>📊 Excel</b>」でタイムテーブルExcelを、「<b>🎞️ PPTX</b>」でステージ映写用スライドを書き出して完成！</div>
+          <div class="step-tip">💡 ライブ前には必ず本番環境でPPTXの見た目を確認してください</div>
+        </div>
+      </div>
+
+      <div class="help-shortcuts">
+        <div class="shortcut-title">⌨️ キーボードショートカット</div>
+        <div class="shortcut-grid">
+          <div class="shortcut-item"><span class="shortcut-key">↑ / ↓</span><span>項目を移動（選択中）</span></div>
+          <div class="shortcut-item"><span class="shortcut-key">Delete</span><span>選択中の項目を削除</span></div>
+          <div class="shortcut-item"><span class="shortcut-key">Ctrl + Z</span><span>ブラウザの元に戻す</span></div>
+        </div>
+      </div>
+
+    </div>
+    <div class="help-footer">
+      <span>制作：<a href="https://x.com/isumiaki" target="_blank" rel="noopener">伊澄アキ</a></span>
+      <button class="btn-help-close" onclick="closeHelp()">✅ わかった！はじめる</button>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden inputs -->
+<input type="file" id="mediaInput" style="display:none;" onchange="handleMediaFile(this)">
+<div id="cpContainer" style="position:absolute;width:0;height:0;overflow:hidden;"></div>
+<div class="toast" id="toast"></div>
+
+<!-- ── Preview Modal ── -->
+<div id="previewModal" onclick="if(event.target===this)closePreview()">
+  <div class="pv-header">
+    <div class="pv-title" id="pvTitle">プレビュー</div>
+    <div class="pv-nav">
+      <button class="pv-arr" id="pvPrev" onclick="pvGo(-1)">◀</button>
+      <span class="pv-slide-count" id="pvCount">1 / 1</span>
+      <button class="pv-arr" id="pvNext" onclick="pvGo(+1)">▶</button>
+    </div>
+    <button class="pv-close" onclick="closePreview()">✕ 閉じる</button>
+  </div>
+  <div class="pv-stage-wrap">
+    <div class="pv-slide" id="pvSlide"></div>
+  </div>
+  <div class="pv-hint">← → キーでスライド切り替え　　Esc で閉じる</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+const S = {
+  performers: [],
+  items: [],
+  selectedId: null,
+  pendingMediaId: null,
+  defMaxLines: 4,
+  showStart: 0,   // 開演時刻（深夜0時からの秒数、0=オフセット表示）
+  fs: { lyricsBase: 48, titleCard: 58, mcLarge: 54, mcBodyBase: 32 }
+};
+
+const PC = ['#ff6b81','#4ecdc4','#45b7d1','#f9ca24','#a29bfe','#fd79a8','#6bffb8','#ffb347'];
+let pcIdx = 0;
+
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+const uid = () => 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2,5);
+
+// ═══════════════════════════════════════════
+// PERSISTENCE (localStorage)
+// ═══════════════════════════════════════════
+function migrateItem(item) {
+  if (!item) return item;
+  if (item.type === 'song') {
+    if (!('cueType'   in item)) item.cueType   = 'titlecall';
+    if (!('cueCustom' in item)) item.cueCustom = '';
+    if (!('entryNote' in item)) item.entryNote = '';
+    if (!('exitNote'  in item)) item.exitNote  = '';
+  }
+  if (item.type === 'mc') {
+    if (!('cue'       in item)) item.cue       = '';
+    if (!('entryNote' in item)) item.entryNote = '';
+    if (!('exitNote'  in item)) item.exitNote  = '';
+  }
+  if (item.type === 'video') {
+    if (!('entryNote' in item)) item.entryNote = '';
+    if (!('exitNote'  in item)) item.exitNote  = '';
+  }
+  return item;
+}
+
+let _saveTimer = null;
+function saveState() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    try {
+      localStorage.setItem('slm_v1', JSON.stringify({
+        items:       S.items,
+        performers:  S.performers,
+        showTitle:   document.getElementById('showTitle').value || '',
+        defMaxLines: S.defMaxLines,
+        showStart:   S.showStart,
+        selectedId:  S.selectedId,
+        fs:          S.fs
+      }));
+      const b = document.getElementById('savedBadge');
+      if (b) { b.style.opacity='1'; setTimeout(()=>b.style.opacity='0', 2000); }
+    } catch(e) {}
+  }, 500);
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('slm_v1');
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (d.items && Array.isArray(d.items))           S.items      = d.items.map(migrateItem);
+    if (d.performers && Array.isArray(d.performers)) S.performers = d.performers;
+    if (d.defMaxLines)           S.defMaxLines = d.defMaxLines;
+    if (d.showStart !== undefined) S.showStart = d.showStart;
+    if (d.selectedId)            S.selectedId  = d.selectedId;
+    if (d.performers)            pcIdx = d.performers.length;
+    if (d.fs) S.fs = Object.assign({lyricsBase:48,titleCard:58,mcLarge:54,mcBodyBase:32}, d.fs);
+    const title = document.getElementById('showTitle');
+    if (d.showTitle && title) title.value = d.showTitle;
+    return true;
+  } catch(e) { return false; }
+}
+
+// ═══════════════════════════════════════════
+// SETTINGS EXPORT / IMPORT
+// ═══════════════════════════════════════════
+async function exportSettings() {
+  const data = {
+    _type: 'setori_settings_v1',
+    performers:  S.performers,
+    defMaxLines: S.defMaxLines,
+    showStart:   S.showStart,
+    fs:          S.fs
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const title = (document.getElementById('showTitle').value || '設定').trim();
+  const ok = await saveBlob(blob, `${title}_settings.json`, 'application/json', 'json');
+  if (ok) showToast('設定を書き出しました');
+}
+
+function importSettings() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = '.json';
+  inp.onchange = async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (data._type !== 'setori_settings_v1') { showToast('設定ファイルの形式が違います', 'err'); return; }
+      if (data.performers && Array.isArray(data.performers)) { S.performers = data.performers; pcIdx = data.performers.length; }
+      if (data.defMaxLines) S.defMaxLines = data.defMaxLines;
+      if (data.fs) S.fs = Object.assign({lyricsBase:48,titleCard:58,mcLarge:54,mcBodyBase:32}, data.fs);
+      if (data.showStart !== undefined) S.showStart = data.showStart;
+      saveState(); rebuildCPs(); showSettings();
+      showToast('設定を読み込みました');
+    } catch(e) { showToast('読み込みに失敗しました', 'err'); }
+  };
+  inp.click();
+}
+
+function fmtS(sec) {
+  if (!sec || sec <= 0) return '--:--';
+  const m = Math.floor(sec / 60), s = Math.floor(sec % 60);
+  return `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+function fmtL(sec) {
+  if (!sec || sec <= 0) return '0:00';
+  const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = Math.floor(sec%60);
+  return h > 0
+    ? `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`
+    : `${m}:${s.toString().padStart(2,'0')}`;
+}
+
+// 開演時刻オフセットを加味した開始時刻表示
+function fmtStart(offsetSec) {
+  if (!S.showStart) return fmtL(offsetSec); // 0:00 起点モード
+  const total = (S.showStart + Math.floor(offsetSec)) % 86400;
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  return `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}`;
+}
+
+function timecodes() {
+  let t = 0;
+  return S.items.map(i => { const s = t; t += (i.duration||0); return s; });
+}
+
+function totalDur() { return S.items.reduce((a,i) => a + (i.duration||0), 0); }
+
+function esc(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════
+// PERFORMERS
+// ═══════════════════════════════════════════
+function addPerformer() {
+  S.performers.push({ id: uid(), name:'', color: PC[pcIdx++ % PC.length], highlight: false, highlightColor: '#facc15' });
+  rebuildCPs();
+  renderPerfList();
+  saveState();
+}
+
+function removePerformer(id) {
+  S.performers = S.performers.filter(p => p.id !== id);
+  rebuildCPs();
+  renderPerfList();
+  saveState();
+}
+
+function setPColor(id, c) {
+  const p = S.performers.find(x => x.id === id);
+  if (p) p.color = c;
+  const sw = document.getElementById('sw'+id);
+  if (sw) sw.style.background = c;
+}
+
+function setPName(id, n) {
+  const p = S.performers.find(x => x.id === id);
+  if (p) p.name = n;
+  saveState();
+}
+
+function setHighlight(id, val) {
+  const p = S.performers.find(x => x.id === id);
+  if (!p) return;
+  p.highlight = val;
+  renderPerfList();
+  saveState();
+}
+
+function setHighlightColor(id, c) {
+  const p = S.performers.find(x => x.id === id);
+  if (!p) return;
+  p.highlightColor = c;
+  const sw = document.getElementById('hlsw'+id);
+  if (sw) sw.style.background = c;
+  saveState();
+}
+
+function rebuildCPs() {
+  document.getElementById('cpContainer').innerHTML =
+    S.performers.map(p =>
+      `<input type="color" id="cp${p.id}" value="${p.color}" oninput="setPColor('${p.id}',this.value)">` +
+      `<input type="color" id="hlcp${p.id}" value="${p.highlightColor||'#facc15'}" oninput="setHighlightColor('${p.id}',this.value)">`
+    ).join('');
+}
+
+function renderPerfList() {
+  const el = document.getElementById('perfListEl');
+  if (!el) return;
+  el.innerHTML = S.performers.map(p => `
+    <div class="perf-row">
+      <div class="swatch" id="sw${p.id}" style="background:${p.color}"
+           onclick="document.getElementById('cp${p.id}').click()"></div>
+      <input class="pname" type="text" placeholder="出演者名" value="${esc(p.name)}"
+             oninput="setPName('${p.id}',this.value)">
+      <button class="hl-btn${p.highlight?' on':''}"
+              onclick="setHighlight('${p.id}',${!p.highlight})"
+              title="蛍光ペンモード ON/OFF">🖊 蛍光ペン</button>
+      ${p.highlight ? `
+      <div class="swatch" id="hlsw${p.id}"
+           style="background:${p.highlightColor||'#facc15'};border-radius:4px;outline:2px solid rgba(253,224,71,.5);"
+           onclick="document.getElementById('hlcp${p.id}').click()"
+           title="蛍光ペンの色を変更"></div>` : ''}
+      <button class="rm" onclick="removePerformer('${p.id}')">×</button>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// ITEMS
+// ═══════════════════════════════════════════
+function newSong(id)  { return {id, type:'song',  title:'新しい楽曲', lyrics:'',    duration:0, titleCard:true, maxLines:S.defMaxLines, cueType:'titlecall', cueCustom:'', entryNote:'', exitNote:''}; }
+function newMC(id)    { return {id, type:'mc',    title:'MC',        script:'',    duration:300, cue:'', entryNote:'', exitNote:''}; }
+function newVideo(id) { return {id, type:'video', title:'映像演出',  description:'', duration:120, entryNote:'', exitNote:''}; }
+
+function addItem(type) {
+  const id = uid();
+  const item = type==='song' ? newSong(id) : type==='mc' ? newMC(id) : newVideo(id);
+  S.items.push(item);
+  S.selectedId = id;
+  renderList();
+  renderEditor();
+  saveState();
+}
+
+function removeItem(id) {
+  const deleted = S.items.find(i => i.id === id);
+  S.items = S.items.filter(i => i.id !== id);
+  if (S.selectedId === id) S.selectedId = S.items.length ? S.items[S.items.length-1].id : null;
+  renderList(); renderEditor();
+  if (deleted) showToast(`🗑️ 「${deleted.title}」を削除しました`);
+}
+
+function moveItem(id, d) {
+  const idx = S.items.findIndex(i => i.id === id);
+  if (idx < 0) return;
+  const ni = idx + d;
+  if (ni < 0 || ni >= S.items.length) return;
+  [S.items[idx], S.items[ni]] = [S.items[ni], S.items[idx]];
+  renderList();
+  saveState();
+}
+
+function selectItem(id) {
+  S.selectedId = id;
+  renderList(); renderEditor();
+}
+
+function updItem(id, k, v) {
+  const item = S.items.find(i => i.id === id);
+  if (!item) return;
+  item[k] = v;
+  if (k === 'title') renderList();
+  if (k === 'lyrics') updateSlideCount(id);
+  if (k === 'cueType' || k === 'cueCustom' || k === 'cue') renderList();
+  if (k === 'entryNote' || k === 'exitNote') renderList();
+  saveState();
+}
+
+// ── 出演者クイック挿入（歌詞・MC 共用）──
+// taId: textarea の id、field: 保存フィールド名（省略時は歌詞用デフォルト）
+function insertPerformerPrefix(itemId, perfId, taId, field) {
+  taId  = taId  || ('lyricsTA_' + itemId);
+  field = field || 'lyrics';
+  const perf = S.performers.find(p => p.id === perfId);
+  if (!perf || !perf.name) return;
+  const name = perf.name;
+
+  const ta = document.getElementById(taId);
+  if (!ta) return;
+
+  const val   = ta.value;
+  const cur   = ta.selectionStart;
+
+  // カーソルがいる行の先頭・末尾を特定
+  const lineStart = val.lastIndexOf('\n', cur - 1) + 1;
+  const lineEnd   = val.indexOf('\n', cur);
+  const lineText  = val.slice(lineStart, lineEnd === -1 ? val.length : lineEnd);
+
+  // 既存の「名前: 」プレフィックスを検出して置換 or 挿入
+  const prefixMatch = lineText.match(/^[^\n:]+:\s*/);
+  let newVal;
+  if (prefixMatch) {
+    newVal = val.slice(0, lineStart) + name + ': ' + val.slice(lineStart + prefixMatch[0].length);
+  } else {
+    newVal = val.slice(0, lineStart) + name + ': ' + val.slice(lineStart);
+  }
+  const newCursor = lineStart + name.length + 2;
+
+  ta.value = newVal;
+  ta.selectionStart = ta.selectionEnd = newCursor;
+  ta.focus();
+  updItem(itemId, field, newVal);
+}
+
+function clearPerformerPrefix(itemId, taId, field) {
+  taId  = taId  || ('lyricsTA_' + itemId);
+  field = field || 'lyrics';
+  const ta = document.getElementById(taId);
+  if (!ta) return;
+
+  const val       = ta.value;
+  const cur       = ta.selectionStart;
+  const lineStart = val.lastIndexOf('\n', cur - 1) + 1;
+  const lineEnd   = val.indexOf('\n', cur);
+  const lineText  = val.slice(lineStart, lineEnd === -1 ? val.length : lineEnd);
+  const prefixMatch = lineText.match(/^[^\n:]+:\s*/);
+  if (!prefixMatch) return;
+
+  const newVal = val.slice(0, lineStart) + val.slice(lineStart + prefixMatch[0].length);
+  ta.value = newVal;
+  ta.selectionStart = ta.selectionEnd = lineStart;
+  ta.focus();
+  updItem(itemId, field, newVal);
+}
+
+// キッカケラジオボタン切り替え
+function updCueType(id, val) {
+  updItem(id, 'cueType', val);
+  const el = document.getElementById('cueCustomEl_' + id);
+  if (el) el.style.display = val === 'custom' ? 'block' : 'none';
+}
+
+// キッカケ表示テキスト取得
+function cueLabel(item) {
+  if (item.type === 'song') {
+    const m = { titlecall:'タイトルコール', readygo:'板付き次第', flow:'そのまま流れで' };
+    return m[item.cueType] || item.cueCustom || 'タイトルコール';
+  }
+  if (item.type === 'mc') return item.cue || '';
+  return '';
+}
+
+function updDur(id, mVal, sVal) {
+  const item = S.items.find(i => i.id === id);
+  if (!item) return;
+  const cm = Math.floor((item.duration||0)/60);
+  const cs = (item.duration||0) % 60;
+  const nm = mVal !== null ? (parseInt(mVal)||0) : cm;
+  const ns = sVal !== null ? (parseInt(sVal)||0) : cs;
+  item.duration = Math.max(0, nm * 60 + Math.max(0, ns));
+  item.mediaFile = null;
+  renderList();
+}
+
+function updateSlideCount(id) {
+  const item = S.items.find(i => i.id === id);
+  const el = document.getElementById('sc'+id);
+  if (!item || !el) return;
+  const slides = parseLyrics(item.lyrics||'', item.maxLines||4);
+  el.textContent = slides.length > 0 ? `${slides.length} スライド` : '';
+}
+
+// ═══════════════════════════════════════════
+// MEDIA FILE IMPORT
+// ═══════════════════════════════════════════
+function openMediaPicker(itemId) {
+  S.pendingMediaId = itemId;
+  const item = S.items.find(i => i.id === itemId);
+  const input = document.getElementById('mediaInput');
+  input.accept = item && item.type === 'video' ? 'audio/*,video/*' : 'audio/*';
+  input.click();
+}
+
+function handleMediaFile(input) {
+  if (!input.files || !input.files[0]) return;
+  const file = input.files[0];
+  const id = S.pendingMediaId;
+  if (!id) return;
+
+  const item = S.items.find(i => i.id === id);
+  if (!item) return;
+
+  // Use video element (handles both audio & video)
+  const media = document.createElement(item.type === 'video' ? 'video' : 'audio');
+  const url = URL.createObjectURL(file);
+  media.addEventListener('loadedmetadata', () => {
+    URL.revokeObjectURL(url);
+    item.duration = Math.round(media.duration);
+    item.mediaFile = file.name;
+    renderList();
+    renderEditor();
+    showToast(`♫ ${file.name} → ${fmtS(item.duration)}`);
+    input.value = '';
+  });
+  media.addEventListener('error', () => {
+    showToast('⚠️ ファイルを読み込めませんでした', 'err');
+    input.value = '';
+  });
+  media.src = url;
+}
+
+// ═══════════════════════════════════════════
+// DRAG & DROP
+// ═══════════════════════════════════════════
+let dragIdx = null;
+
+function dStart(e, idx) {
+  dragIdx = idx;
+  e.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => {
+    const el = e.target.closest('.sl-item');
+    if (el) el.classList.add('dragging');
+    // ゴミ箱ゾーンを表示
+    const tz = document.getElementById('trashZone');
+    if (tz) tz.classList.add('visible');
+  }, 0);
+}
+
+function dEnd(e) {
+  const el = e.target.closest('.sl-item');
+  if (el) el.classList.remove('dragging');
+  document.querySelectorAll('.sl-item').forEach(el => el.classList.remove('dover'));
+  // ゴミ箱ゾーンを隠す
+  const tz = document.getElementById('trashZone');
+  if (tz) { tz.classList.remove('visible'); tz.classList.remove('over'); }
+}
+
+function dOver(e, idx) {
+  e.preventDefault();
+  document.querySelectorAll('.sl-item').forEach(el => el.classList.remove('dover'));
+  const items = document.querySelectorAll('.sl-item');
+  if (items[idx]) items[idx].classList.add('dover');
+}
+
+function dDrop(e, idx) {
+  e.preventDefault();
+  document.querySelectorAll('.sl-item').forEach(el => el.classList.remove('dover'));
+  if (dragIdx === null || dragIdx === idx) return;
+  const item = S.items.splice(dragIdx, 1)[0];
+  S.items.splice(idx, 0, item);
+  dragIdx = null;
+  renderList();
+}
+
+// ── ゴミ箱ゾーン ──
+function dOverTrash(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.sl-item').forEach(el => el.classList.remove('dover'));
+  const tz = document.getElementById('trashZone');
+  if (tz) tz.classList.add('over');
+}
+
+function dLeaveTrash(e) {
+  const tz = document.getElementById('trashZone');
+  if (tz) tz.classList.remove('over');
+}
+
+function dDropTrash(e) {
+  e.preventDefault();
+  const tz = document.getElementById('trashZone');
+  tz.classList.remove('over');
+  tz.classList.remove('visible');
+  if (dragIdx === null) return;
+
+  const deleted = S.items[dragIdx];
+  S.items.splice(dragIdx, 1);
+  if (S.selectedId === deleted.id) {
+    S.selectedId = S.items.length ? S.items[Math.min(dragIdx, S.items.length-1)].id : null;
+  }
+  dragIdx = null;
+  renderList();
+  renderEditor();
+  showToast(`🗑️ 「${deleted.title}」を削除しました`);
+}
+
+// ═══════════════════════════════════════════
+// RENDER: SETLIST
+// ═══════════════════════════════════════════
+const ICONS  = {song:'🎵', mc:'🎤', video:'🎬'};
+const LABELS = {song:'楽曲', mc:'MC', video:'映像演出'};
+const TCLASS = {song:'s', mc:'m', video:'v'};
+
+function renderList() {
+  const el = document.getElementById('slList');
+  const tc = timecodes();
+
+  if (!S.items.length) {
+    el.innerHTML = '<div class="sl-empty">上のボタンから演目を追加してください</div>';
+    document.getElementById('totalTime').textContent = '0:00';
+    return;
+  }
+
+  el.innerHTML = S.items.map((item, idx) => `
+    <div class="sl-item type-${item.type} ${item.id===S.selectedId?'sel':''}"
+         draggable="true"
+         onclick="selectItem('${item.id}')"
+         ondragstart="dStart(event,${idx})"
+         ondragend="dEnd(event)"
+         ondragover="dOver(event,${idx})"
+         ondrop="dDrop(event,${idx})">
+      <div class="drag-h">⠿</div>
+      <div class="type-icon">${ICONS[item.type]}</div>
+      <div class="item-info">
+        <div class="item-num">${(idx+1).toString().padStart(2,'0')} / ${LABELS[item.type]}</div>
+        <div class="item-ttl ${TCLASS[item.type]}">${esc(item.title)}</div>
+        ${cueLabel(item) ? `<div class="item-cue">▶ ${esc(cueLabel(item))}</div>` : ''}
+        ${(item.entryNote||item.exitNote) ? `<div class="item-cue danger">${item.entryNote?'⬆ '+esc(item.entryNote):''}${item.entryNote&&item.exitNote?' ／ ':''}${item.exitNote?'⬇ '+esc(item.exitNote):''}</div>` : ''}
+      </div>
+      <div class="item-tc">
+        <div class="tc-start">${fmtStart(tc[idx])}</div>
+        <div class="tc-dur">${fmtS(item.duration)}</div>
+      </div>
+      <div class="item-acts">
+        <button class="ia" onclick="event.stopPropagation();moveItem('${item.id}',-1)" title="上へ">▲</button>
+        <button class="ia del" onclick="event.stopPropagation();removeItem('${item.id}')" title="削除">✕</button>
+        <button class="ia" onclick="event.stopPropagation();moveItem('${item.id}',1)" title="下へ">▼</button>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('totalTime').textContent = fmtL(totalDur());
+  saveState();
+}
+
+// ═══════════════════════════════════════════
+// RENDER: EDITOR
+// ═══════════════════════════════════════════
+function renderEditor() {
+  const panel = document.getElementById('edPanel');
+  const item = S.selectedId ? S.items.find(i => i.id === S.selectedId) : null;
+
+  if (!item) {
+    panel.innerHTML = `<div class="ed-empty">
+      <div class="ed-empty-icon">🎬</div>
+      <div class="ed-empty-text">演目を選択するか、新しく追加してください</div>
+    </div>`;
+    return;
+  }
+
+  let html = '';
+  if (item.type === 'song')  html = buildSongEditor(item);
+  if (item.type === 'mc')    html = buildMCEditor(item);
+  if (item.type === 'video') html = buildVideoEditor(item);
+  panel.innerHTML = `<div class="ed-scroll">${html}</div>`;
+
+  if (item.type === 'song') {
+    updateSlideCount(item.id);
+    lyricsLenCheck(item.id); // 既存の長い行を開いた時点で警告表示
+  }
+}
+
+function durFields(item) {
+  const m = Math.floor((item.duration||0)/60);
+  const s = (item.duration||0) % 60;
+  return `
+    <div class="dur-row">
+      <button class="file-btn" onclick="openMediaPicker('${item.id}')">
+        ♫ ファイルから自動取得
+      </button>
+      <div class="dur-manual">
+        <input class="dur-n" type="number" min="0" max="999" value="${m}"
+               onchange="updDur('${item.id}',this.value,null)">分
+        <input class="dur-n" type="number" min="0" max="59" value="${s.toString().padStart(2,'0')}"
+               onchange="updDur('${item.id}',null,this.value)">秒
+      </div>
+      ${item.mediaFile ? `<span class="dur-tag">♫ ${esc(item.mediaFile)}</span>` : ''}
+      ${(item.duration||0) > 0 ? `<button class="timer-btn" onclick="openTimer('${item.id}')">⏱ タイマー</button>` : ''}
+    </div>`;
+}
+
+// ── 入りハケ共通ブロック ──
+function entryExitBlock(item) {
+  return `
+    <div class="cue-block danger">
+      <div class="cue-hd red">⬆ 入り・⬇ ハケ 指示</div>
+      <div class="ee-grid">
+        <div>
+          <div class="ee-label ee-entry">⬆ 入り指示</div>
+          <input class="inp" type="text" placeholder="例：暗転後にWH出"
+                 value="${esc(item.entryNote||'')}"
+                 oninput="updItem('${item.id}','entryNote',this.value)">
+        </div>
+        <div>
+          <div class="ee-label ee-exit">⬇ ハケ指示</div>
+          <input class="inp" type="text" placeholder="例：SE終わりにハケ"
+                 value="${esc(item.exitNote||'')}"
+                 oninput="updItem('${item.id}','exitNote',this.value)">
+        </div>
+      </div>
+    </div>`;
+}
+
+function buildSongEditor(item) {
+  const curCue = item.cueType || 'titlecall';
+  const cueOpts = [
+    {val:'titlecall', label:'タイトルコール'},
+    {val:'readygo',   label:'板付き次第'},
+    {val:'flow',      label:'そのまま流れで'},
+    {val:'custom',    label:'自由入力'}
+  ];
+
+  return `
+    <div class="ed-hd">
+      <span class="type-badge s">🎵 楽曲</span>
+      <span class="ed-title-text">${esc(item.title)||'（未入力）'}</span>
+      <button class="prev-btn" onclick="openPreview('${item.id}')">🔍 プレビュー</button>
+    </div>
+
+    <div class="two-col">
+      <div class="frow">
+        <label>楽曲タイトル</label>
+        <input class="inp" type="text" value="${esc(item.title)}"
+               oninput="updItem('${item.id}','title',this.value)">
+      </div>
+      <div class="frow">
+        <label>1スライドの最大行数</label>
+        <select class="sel-inp" onchange="updItem('${item.id}','maxLines',parseInt(this.value));updateSlideCount('${item.id}')">
+          <option value="2" ${item.maxLines===2?'selected':''}>2行</option>
+          <option value="3" ${item.maxLines===3?'selected':''}>3行</option>
+          <option value="4" ${item.maxLines===4?'selected':''}>4行（推奨）</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="frow">
+      <label>楽曲の長さ</label>
+      ${durFields(item)}
+    </div>
+
+    <div class="frow">
+      <label class="cb-row">
+        <input type="checkbox" ${item.titleCard?'checked':''}
+               onchange="updItem('${item.id}','titleCard',this.checked)">
+        先頭に曲名スライドを追加する（推奨）
+      </label>
+    </div>
+
+    <hr class="div">
+
+    <!-- キッカケ -->
+    <div class="cue-block">
+      <div class="cue-hd purple">▶ キッカケ（曲名スライドに表示）</div>
+      <div class="radio-grp">
+        ${cueOpts.map(c => `
+          <label class="radio-opt">
+            <input type="radio" name="cue_${item.id}" value="${c.val}"
+                   ${curCue===c.val?'checked':''}
+                   onchange="updCueType('${item.id}',this.value)">
+            ${c.label}
+          </label>`).join('')}
+      </div>
+      <input class="inp" type="text" id="cueCustomEl_${item.id}"
+             placeholder="キッカケを入力…"
+             value="${esc(item.cueCustom||'')}"
+             style="display:${curCue==='custom'?'block':'none'};margin-top:6px;"
+             oninput="updItem('${item.id}','cueCustom',this.value)">
+    </div>
+
+    <!-- 入りハケ -->
+    ${entryExitBlock(item)}
+
+    <hr class="div">
+
+    <div class="frow">
+      <label>歌詞</label>
+
+      ${S.performers.filter(p=>p.name).length ? `
+        <div class="perf-ins-row">
+          <span class="perf-ins-lbl">🎨 行に挿入:</span>
+          ${S.performers.filter(p=>p.name).map(p=>`
+            <button class="perf-ins-btn"
+                    style="border-color:${p.color};color:${p.color};"
+                    onclick="insertPerformerPrefix('${item.id}','${p.id}')"
+                    title="${esc(p.name)}: を現在の行頭に挿入">
+              ${esc(p.name)}
+            </button>`).join('')}
+          <button class="perf-ins-clear"
+                  onclick="clearPerformerPrefix('${item.id}')"
+                  title="現在の行の出演者名を削除">✕ 解除</button>
+        </div>` : `
+        <div class="hint" style="margin-bottom:8px;">
+          ⚙️ 設定で出演者を登録すると、ここにクイック挿入ボタンが表示されます
+        </div>`}
+
+      <textarea class="txt-area" id="lyricsTA_${item.id}"
+                placeholder="[イントロ]&#10;（インスト）&#10;&#10;[Aメロ]&#10;太郎: 君の名を呼ぶたびに&#10;花子: 声が震えてしまうよ&#10;&#10;[サビ]&#10;届け届け思いよ"
+                oninput="updItem('${item.id}','lyrics',this.value);lyricsLenCheck('${item.id}')">${esc(item.lyrics)}</textarea>
+      <div id="lyricsWarn_${item.id}"></div>
+    </div>
+
+    <div class="frow" style="display:flex;align-items:center;gap:10px;">
+      <button class="act-btn" onclick="generateItemPPTX('${item.id}')">
+        ✨ この楽曲のみ PPTX 生成
+      </button>
+      <span class="slide-cnt" id="sc${item.id}"></span>
+    </div>
+
+    <hr class="div">
+
+    <div class="hint">
+      <b style="color:var(--text);">書き方ガイド</b><br>
+      <code>[セクション名]</code> → [Aメロ][サビ] などのラベル（スライド右上に表示）<br>
+      <code>名前: 歌詞</code> → 出演者カラー表示 ／ 上のボタンで自動挿入可<br>
+      空行 → スライドの区切り
+    </div>`;
+}
+
+function buildMCEditor(item) {
+  return `
+    <div class="ed-hd">
+      <span class="type-badge m">🎤 MC</span>
+      <span class="ed-title-text">${esc(item.title)||'（未入力）'}</span>
+      <button class="prev-btn" onclick="openPreview('${item.id}')">🔍 プレビュー</button>
+    </div>
+
+    <div class="frow">
+      <label>タイトル / ラベル</label>
+      <input class="inp" type="text" value="${esc(item.title)}"
+             oninput="updItem('${item.id}','title',this.value)">
+    </div>
+    <div class="frow">
+      <label>予定時間</label>
+      ${durFields(item)}
+    </div>
+
+    <hr class="div">
+
+    <!-- キッカケ -->
+    <div class="cue-block">
+      <div class="cue-hd purple">▶ キッカケ（MC 先頭スライドに表示）</div>
+      <input class="inp" type="text"
+             placeholder="例：前の曲終わり次第 / SE フェードアウト後…"
+             value="${esc(item.cue||'')}"
+             oninput="updItem('${item.id}','cue',this.value)">
+    </div>
+
+    <!-- 入りハケ -->
+    ${entryExitBlock(item)}
+
+    <hr class="div">
+
+    <div class="frow">
+      <label>トーク内容・台本メモ（プロンプターに表示されます）</label>
+
+      ${S.performers.filter(p=>p.name).length ? `
+        <div class="perf-ins-row">
+          <span class="perf-ins-lbl">🎨 行に挿入:</span>
+          ${S.performers.filter(p=>p.name).map(p=>`
+            <button class="perf-ins-btn"
+                    style="border-color:${p.color};color:${p.color};"
+                    onclick="insertPerformerPrefix('${item.id}','${p.id}','scriptTA_${item.id}','script')"
+                    title="${esc(p.name)}: を現在の行頭に挿入">
+              ${esc(p.name)}
+            </button>`).join('')}
+          <button class="perf-ins-clear"
+                  onclick="clearPerformerPrefix('${item.id}','scriptTA_${item.id}','script')"
+                  title="現在の行の出演者名を削除">✕ 解除</button>
+        </div>` : `
+        <div class="hint" style="margin-bottom:8px;">
+          ⚙️ 設定で出演者を登録すると、ここにクイック挿入ボタンが表示されます
+        </div>`}
+
+      <textarea class="txt-area" id="scriptTA_${item.id}" style="min-height:280px;"
+                placeholder="トークのポイントや台本を入力…&#10;&#10;空行でスライドが区切られます&#10;&#10;[トピック名] で区切り見出しを入れられます&#10;&#10;太郎: 今日はありがとうございます！&#10;花子: 楽しんでもらえましたか？"
+                oninput="updItem('${item.id}','script',this.value)">${esc(item.script||'')}</textarea>
+    </div>
+
+    <div class="frow">
+      <button class="act-btn" onclick="generateItemPPTX('${item.id}')">
+        ✨ この MC のみ PPTX 生成
+      </button>
+    </div>
+
+    <hr class="div">
+    <div class="hint">
+      <b style="color:var(--text);">書き方ガイド</b><br>
+      <code>[トピック名]</code> → セクション区切りのラベルを挿入<br>
+      <code>名前: テキスト</code> → 行全体を出演者カラーで表示 ／ 上のボタンで自動挿入可<br>
+      <code>{名前:テキスト}</code> → 行の途中だけ色を変える<br>
+      <b style="color:var(--text);">空行 → ここで改ページ（任意のタイミングで区切れます）</b>
+    </div>`;
+}
+
+function buildVideoEditor(item) {
+  return `
+    <div class="ed-hd">
+      <span class="type-badge v">🎬 映像演出</span>
+      <span class="ed-title-text">${esc(item.title)||'（未入力）'}</span>
+      <button class="prev-btn" onclick="openPreview('${item.id}')">🔍 プレビュー</button>
+    </div>
+
+    <div class="two-col">
+      <div class="frow">
+        <label>タイトル / ラベル</label>
+        <input class="inp" type="text" value="${esc(item.title)}"
+               oninput="updItem('${item.id}','title',this.value)">
+      </div>
+      <div class="frow">
+        <label>映像の長さ</label>
+        ${durFields(item)}
+      </div>
+    </div>
+
+    <!-- 入りハケ -->
+    ${entryExitBlock(item)}
+
+    <hr class="div">
+
+    <div class="frow">
+      <label>メモ・説明（スタッフへの備考など）</label>
+      <textarea class="txt-area" style="min-height:150px;"
+                placeholder="映像の内容、スイッチャー指示、注意事項など…"
+                oninput="updItem('${item.id}','description',this.value)">${esc(item.description||'')}</textarea>
+    </div>
+
+    <hr class="div">
+    <div class="hint">
+      映像演出はタイムコード管理に使われます。全体 PPTX 生成時にプレースホルダースライドが挿入されます。
+    </div>`;
+}
+
+// ═══════════════════════════════════════════
+// LYRICS LINE LENGTH CHECK
+// ═══════════════════════════════════════════
+function lyricsLenCheck(itemId) {
+  const warn = document.getElementById('lyricsWarn_' + itemId);
+  const ta   = document.getElementById('lyricsTA_' + itemId);
+  if (!warn || !ta) return;
+
+  // スライド幅(インチ) = 12.53"、フォントサイズから1行あたりの目安文字数を算出
+  const limit = Math.round(12.0 / (S.fs.lyricsBase / 72));
+  const lines = ta.value.split('\n');
+  const longLines = [];
+
+  lines.forEach((raw, i) => {
+    const t = raw.trim();
+    if (!t || /^\[.+\]$/.test(t)) return; // 空行・セクション行はスキップ
+    // 出演者プレフィックス（名前:）を除いた本文で判定
+    const body = t.replace(/^[^\n:]+:\s*/, '');
+    const len  = [...body].length; // Unicode文字数（絵文字対応）
+    if (len > limit) longLines.push({ lineNum: i + 1, len, text: body });
+  });
+
+  if (!longLines.length) { warn.innerHTML = ''; return; }
+
+  const items = longLines.map(l =>
+    `<span class="lw-line">行${l.lineNum}</span>: ${l.len}字`
+  ).join('　');
+
+  warn.innerHTML = `<div class="lyrics-warn">
+    ⚠️ <b>長すぎる行があります</b>（目安 ${limit}字以内 / 現在のフォント${S.fs.lyricsBase}pt）<br>
+    ${items}<br>
+    <span style="color:var(--muted);font-size:10px;">改行を入れるか、⚙️設定でフォントを小さくすると解消できます</span>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════
+// SETTINGS PANEL
+// ═══════════════════════════════════════════
+function showSettings() {
+  S.selectedId = null;
+  renderList();
+  document.getElementById('edPanel').innerHTML = `
+    <div class="ed-scroll">
+      <div class="ed-hd">
+        <span style="font-size:20px;">⚙️</span>
+        <span class="ed-title-text">公演設定</span>
+      </div>
+
+      <div class="frow">
+        <div class="s-heading">🎤 出演者カラー設定</div>
+        <div id="perfListEl"></div>
+        <button class="add-p-btn" onclick="addPerformer()">＋ 出演者を追加</button>
+        <div class="hint" style="margin-top:8px;">
+          登録した名前を歌詞・MCの行頭に「名前:（コロン）」と書くと色付きで表示されます<br>
+          例: <code>太郎: 歌詞テキスト</code>（行全体を色付け）<br>
+          行の途中だけ色を変えたい場合: <code>{太郎:テキスト}</code>
+        </div>
+      </div>
+
+      <hr class="div">
+
+      <div class="frow">
+        <label>🕐 開演時刻</label>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <input type="time"
+            value="${S.showStart ? (()=>{const h=Math.floor(S.showStart/3600),m=Math.floor((S.showStart%3600)/60);return h.toString().padStart(2,'0')+':'+m.toString().padStart(2,'0');})() : ''}"
+            class="inp" style="width:130px;"
+            oninput="const v=this.value;S.showStart=v?(parseInt(v.split(':')[0])*3600+parseInt(v.split(':')[1])*60):0;renderList();saveState();">
+          <button class="act-btn" style="font-size:11px;padding:6px 12px;"
+            onclick="S.showStart=0;document.querySelector('input[type=time]').value='';renderList();saveState();">
+            リセット（0:00起点）
+          </button>
+        </div>
+        <div class="hint" style="margin-top:6px;">
+          設定するとセットリストの時刻が「19:00」形式の実時刻で表示されます。未設定の場合は開始からの経過時間で表示。
+        </div>
+      </div>
+
+      <hr class="div">
+
+      <div class="frow">
+        <label>新規楽曲のデフォルト行数</label>
+        <select class="sel-inp" style="width:auto;"
+                onchange="S.defMaxLines=parseInt(this.value);saveState()">
+          <option value="2" ${S.defMaxLines===2?'selected':''}>2行</option>
+          <option value="3" ${S.defMaxLines===3?'selected':''}>3行</option>
+          <option value="4" ${S.defMaxLines===4?'selected':''}>4行（推奨）</option>
+        </select>
+      </div>
+
+      <hr class="div">
+
+      <div class="frow">
+        <div class="s-heading">🔤 スライド フォントサイズ</div>
+        <div class="hint" style="margin-bottom:14px;">PPTX生成時のフォントサイズを調整できます。変更後はPPTXを再生成してください。</div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div>
+            <label style="color:var(--song);">🎵 歌詞（4行）</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" min="32" max="72" step="2"
+                value="${S.fs.lyricsBase}"
+                oninput="S.fs.lyricsBase=parseInt(this.value);this.nextElementSibling.textContent=this.value+'pt';saveState();"
+                style="flex:1;accent-color:var(--song);">
+              <span style="font-size:13px;font-weight:700;color:var(--song);min-width:36px;text-align:right;">${S.fs.lyricsBase}pt</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">3行: ${Math.round(S.fs.lyricsBase*1.125)}pt / 2行以下: ${Math.round(S.fs.lyricsBase*1.33)}pt (自動)</div>
+          </div>
+
+          <div>
+            <label>🃏 タイトルカード</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" min="32" max="80" step="2"
+                value="${S.fs.titleCard}"
+                oninput="S.fs.titleCard=parseInt(this.value);this.nextElementSibling.textContent=this.value+'pt';saveState();"
+                style="flex:1;accent-color:var(--accent);">
+              <span style="font-size:13px;font-weight:700;color:var(--accent2);min-width:36px;text-align:right;">${S.fs.titleCard}pt</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">楽曲・映像タイトルカードに使用</div>
+          </div>
+
+          <div>
+            <label style="color:var(--mc);">🎙 MC タイトル</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" min="24" max="72" step="2"
+                value="${S.fs.mcLarge}"
+                oninput="S.fs.mcLarge=parseInt(this.value);this.nextElementSibling.textContent=this.value+'pt';saveState();"
+                style="flex:1;accent-color:var(--mc);">
+              <span style="font-size:13px;font-weight:700;color:var(--mc);min-width:36px;text-align:right;">${S.fs.mcLarge}pt</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">スクリプトなしのMCスライドに使用</div>
+          </div>
+
+          <div>
+            <label style="color:var(--mc);">🎙 MC スクリプト（4行）</label>
+            <div style="display:flex;align-items:center;gap:8px;">
+              <input type="range" min="18" max="54" step="2"
+                value="${S.fs.mcBodyBase}"
+                oninput="S.fs.mcBodyBase=parseInt(this.value);this.nextElementSibling.textContent=this.value+'pt';saveState();"
+                style="flex:1;accent-color:var(--mc);">
+              <span style="font-size:13px;font-weight:700;color:var(--mc);min-width:36px;text-align:right;">${S.fs.mcBodyBase}pt</span>
+            </div>
+            <div style="font-size:10px;color:var(--muted);margin-top:3px;">2行: ${Math.round(S.fs.mcBodyBase*1.44)}pt / 4行: ${S.fs.mcBodyBase}pt / 8行: ${Math.round(S.fs.mcBodyBase*0.75)}pt (自動スケール)</div>
+          </div>
+        </div>
+
+        <button class="act-btn" style="margin-top:14px;font-size:12px;"
+          onclick="S.fs={lyricsBase:48,titleCard:58,mcLarge:54,mcBodyBase:32};saveState();showSettings();">
+          ↩ デフォルトに戻す
+        </button>
+      </div>
+
+      <hr class="div">
+
+      <div class="frow">
+        <div class="s-heading">💾 設定の書き出し / 読み込み</div>
+        <div class="hint" style="margin-bottom:10px;">出演者カラー・フォントサイズなどの設定情報のみを JSON ファイルで保存・共有できます。別のプロジェクトに引き継ぐ際に便利です。</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="act-btn" style="font-size:12px;" onclick="exportSettings()">📤 設定を書き出す</button>
+          <button class="act-btn" style="font-size:12px;" onclick="importSettings()">📥 設定を読み込む</button>
+        </div>
+      </div>
+    </div>`;
+
+  rebuildCPs();
+  renderPerfList();
+}
+
+// ═══════════════════════════════════════════
+// LYRICS PARSING
+// ═══════════════════════════════════════════
+function parseLyrics(text, maxLines) {
+  const slides = [];
+  let cur = { lines:[], section:'' };
+  let lastSec = '';
+
+  function flush() {
+    if (cur.lines.length) {
+      slides.push({ lines:[...cur.lines], section:cur.section });
+      cur = { lines:[], section:lastSec };
+    }
+  }
+
+  for (const raw of text.split('\n')) {
+    const t = raw.trim();
+    const sm = t.match(/^\[(.+)\]$/);
+    if (sm) { flush(); lastSec = sm[1]; cur.section = lastSec; continue; }
+    if (!t) { flush(); continue; }
+    cur.lines.push(parseLineColor(t));
+    if (cur.lines.length >= maxLines) flush();
+  }
+  flush();
+  return slides.filter(s => s.lines.length);
+}
+
+function parseInlineSegments(text, defaultStyle) {
+  // インライン色変更: {出演者名:テキスト} 記法をパース
+  const regex = /\{([^:}]+):([^}]*)\}/g;
+  const segments = [];
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    // マッチ前のプレーンテキスト（空なら追加しない）
+    if (match.index > lastIndex) {
+      const sl = text.slice(lastIndex, match.index);
+      if (sl) segments.push({ text: sl, color: defaultStyle.color, highlight: defaultStyle.highlight, highlightColor: defaultStyle.highlightColor });
+    }
+    const pName = match[1].trim();
+    const pText = match[2];
+    // 中身が空の {name:} はスキップ
+    if (pText) {
+      const p = S.performers.find(x => x.name && x.name === pName);
+      if (p) {
+        segments.push({ text: pText, color: p.color, highlight: p.highlight||false, highlightColor: p.highlightColor||p.color });
+      } else {
+        segments.push({ text: pText, color: defaultStyle.color, highlight: defaultStyle.highlight, highlightColor: defaultStyle.highlightColor });
+      }
+    }
+    lastIndex = regex.lastIndex;
+  }
+  // マッチ後の残りテキスト（空なら追加しない）
+  if (lastIndex < text.length) {
+    const trail = text.slice(lastIndex);
+    if (trail) segments.push({ text: trail, color: defaultStyle.color, highlight: defaultStyle.highlight, highlightColor: defaultStyle.highlightColor });
+  }
+  // セグメントなし（テキスト自体が空、または全て空マッチ）→ フォールバック
+  if (segments.length === 0) {
+    segments.push({ text, color: defaultStyle.color, highlight: defaultStyle.highlight, highlightColor: defaultStyle.highlightColor });
+  }
+  return segments;
+}
+
+function parseLineColor(text) {
+  for (const p of S.performers) {
+    if (p.name && text.startsWith(p.name + ':')) {
+      const lineText = text.slice(p.name.length+1).trim();
+      const def = { color: p.color, highlight: p.highlight||false, highlightColor: p.highlightColor||p.color };
+      return { text: lineText, color: p.color, highlight: p.highlight||false, highlightColor: p.highlightColor||p.color, segments: parseInlineSegments(lineText, def) };
+    }
+  }
+  const def = { color: null, highlight: false, highlightColor: null };
+  return { text, color: null, highlight: false, highlightColor: null, segments: parseInlineSegments(text, def) };
+}
+
+// ═══════════════════════════════════════════
+// PPTX — helpers
+// ═══════════════════════════════════════════
+const W = 13.33, H = 7.5;
+const fsLyrics = n => {
+  const b = S.fs.lyricsBase;
+  return n <= 2 ? Math.round(b * 1.33) : n <= 3 ? Math.round(b * 1.125) : b;
+};
+const fsMCBody = n => {
+  const b = S.fs.mcBodyBase;
+  // スライド本文エリア (topY=0.78in, botY=6.35in) に最大限フィットするサイズを計算
+  // 1行の高さ = fontSize × lineSpacing(1.45)、90%を有効エリアとして使用
+  const availPt = Math.round((6.35 - 0.78) * 72 * 0.90); // ≈ 361pt
+  const fitSize = Math.floor(availPt / (n * 1.45));
+  const maxSize = Math.round(b * 1.44); // 上限：2行時と同じ最大サイズ
+  return Math.max(14, Math.min(maxSize, fitSize));
+};
+
+function pptxSlide(pptx, bg) {
+  const s = pptx.addSlide();
+  s.background = { color: bg || '000000' };
+  return s;
+}
+
+function seqBar(s, idx, total, color) {
+  s.addShape(pptx_inst.ShapeType.rect, { x:0, y:H-0.18, w:W, h:0.18,
+    fill:{color:'0e0e22'}, line:{color:'0e0e22',width:0} });
+  s.addShape(pptx_inst.ShapeType.rect, { x:0, y:H-0.18, w:W*((idx+1)/total), h:0.18,
+    fill:{color:color}, line:{color:color,width:0} });
+}
+
+// shared reference for ShapeType access
+let pptx_inst = null;
+
+// ── Song: title card ──
+function addSongTitleCard(s, item, tc, itemIdx, total) {
+  s.addText(`${(itemIdx+1).toString().padStart(2,'0')} / ${total}   🎵`, {
+    x:0.4, y:0.15, w:W-0.8, h:0.45,
+    fontSize:15, color:'444466', align:'center', fontFace:'Meiryo'
+  });
+
+  // キッカケ label (top-left, strictly left half)
+  const cue = cueLabel(item);
+  if (cue) {
+    s.addText('▶ ' + cue, {
+      x:0.4, y:0.65, w:W/2-0.55, h:0.48,
+      fontSize:17, color:'8b8df5', bold:true, align:'left', fontFace:'Meiryo'
+    });
+  }
+
+  // 入り指示 (top-right, strictly right half)
+  if (item.entryNote) {
+    s.addText('⬆ ' + item.entryNote, {
+      x:W/2+0.15, y:0.65, w:W/2-0.55, h:0.48,
+      fontSize:17, color:'f87171', bold:true, align:'right', fontFace:'Meiryo'
+    });
+  }
+
+  s.addText(item.title||'無題', {
+    x:0.5, y:1.5, w:W-1.0, h:3.5,
+    fontSize:S.fs.titleCard, color:'FFFFFF', bold:true,
+    align:'center', valign:'middle', fontFace:'Meiryo', wrap:true
+  });
+  // Accent line
+  s.addShape(pptx_inst.ShapeType.rect, {
+    x:W/2-1.5, y:5.3, w:3.0, h:0.06,
+    fill:{color:'c9a84c'}, line:{color:'c9a84c',width:0}
+  });
+  if (tc !== undefined) {
+    s.addText(fmtStart(tc), {
+      x:0.4, y:5.5, w:W-0.8, h:0.45,
+      fontSize:17, color:'555577', align:'center', fontFace:'Meiryo'
+    });
+  }
+}
+
+// ── Song: lyrics slides ──
+function addLyricsSlides(pptx, item, itemIdx, total) {
+  const allSlides = parseLyrics(item.lyrics||'', item.maxLines||4);
+  const tot = allSlides.length;
+  if (!tot) return;
+
+  allSlides.forEach((slide, idx) => {
+    const s = pptxSlide(pptx);
+    const n = slide.lines.length;
+    const fs = fsLyrics(n);
+
+    // section (top-right)
+    if (slide.section) s.addText(slide.section, {
+      x:W*0.5, y:0.12, w:W*0.47, h:0.48,
+      fontSize:16, color:'555577', align:'right', fontFace:'Meiryo', italic:true
+    });
+
+    // song title (top-left)
+    s.addText(item.title||'', {
+      x:0.3, y:0.12, w:W*0.47, h:0.48,
+      fontSize:15, color:'444466', align:'left', fontFace:'Meiryo', italic:true
+    });
+
+    // lyrics — 全行を1テキストボックスに統合（セグメントごとにカラー設定）
+    const topY=0.78, botY=6.35;
+    const lyricsRuns = [];
+    slide.lines.forEach((line, li) => {
+      const segs = (line.segments && line.segments.length > 0)
+        ? line.segments
+        : [{ text: line.text, color: line.color, highlight: line.highlight, highlightColor: line.highlightColor }];
+      segs.forEach((seg, si) => {
+        const hex = (seg.color||'#FFFFFF').replace('#','').padStart(6,'0').toUpperCase();
+        const isLastSeg = si === segs.length - 1;
+        const opts = { color: hex, breakLine: isLastSeg && li < n-1 };
+        if (seg.highlight && seg.color) {
+          const hlHex = (seg.highlightColor||seg.color).replace('#','').padStart(6,'0').toUpperCase();
+          opts.highlight = hlHex;
+        }
+        lyricsRuns.push({ text: seg.text, options: opts });
+      });
+    });
+    s.addText(lyricsRuns, {
+      x:0.4, y:topY, w:W-0.8, h:botY-topY,
+      fontSize:fs, bold:true,
+      align:'center', valign:'middle', fontFace:'Meiryo', wrap:true,
+      lineSpacingMultiple: 1.5
+    });
+
+    // bottom: song name + slide number
+    s.addText(item.title||'', {
+      x:0.3, y:H-0.78, w:W*0.5, h:0.46,
+      fontSize:13, color:'3d3d5c', align:'left', fontFace:'Meiryo', italic:true
+    });
+    s.addText(`${idx+1}  /  ${tot}`, {
+      x:W*0.5, y:H-0.78, w:W*0.47, h:0.46,
+      fontSize:13, color:'3d3d5c', align:'right', fontFace:'Meiryo'
+    });
+
+    // ハケ指示 — last lyrics slide
+    if (idx === tot-1 && item.exitNote) {
+      s.addText('⬇ ' + item.exitNote, {
+        x:0.3, y:6.38, w:W-0.6, h:0.3,
+        fontSize:14, color:'f87171', bold:true, align:'right', fontFace:'Meiryo'
+      });
+    }
+
+    seqBar(s, idx, tot, '5eab7a');
+  });
+}
+
+// ── MC block parser（プレビューと PPTX 生成で共用） ──
+function parseMCBlocks(raw) {
+  const MAX_MC = 12; // 任意改ページ優先のため余裕を持たせる
+  const blocks = [];
+  let cur = { lines:[], section:'' };
+  let lastSec = '';
+  function flush2() {
+    if (cur.lines.length) { blocks.push({...cur, lines:[...cur.lines]}); cur={lines:[],section:lastSec}; }
+  }
+  for (const row of raw.split('\n')) {
+    const t = row.trim();
+    const sm = t.match(/^\[(.+)\]$/);
+    if (sm) { flush2(); lastSec=sm[1]; cur.section=lastSec; continue; }
+    if (!t) { flush2(); continue; }
+    cur.lines.push(parseLineColor(t));
+    if (cur.lines.length >= MAX_MC) flush2();
+  }
+  flush2();
+  return blocks;
+}
+
+// ── MC slides ──
+function addMCSlides(pptx, item) {
+  const raw = (item.script||'').trim();
+  if (!raw) {
+    const s = pptxSlide(pptx, '06060f');
+    s.addText('MC', { x:0.3,y:0.15, w:2,h:0.5, fontSize:17,color:'fb923c',bold:true,align:'left',fontFace:'Meiryo' });
+    if (item.cue) s.addText('▶ '+item.cue, { x:0.3,y:0.68,w:W/2-0.4,h:0.5, fontSize:17,color:'fdba74',bold:true,align:'left',fontFace:'Meiryo' });
+    if (item.entryNote) s.addText('⬆ '+item.entryNote, { x:W/2+0.1,y:0.68,w:W/2-0.5,h:0.5, fontSize:17,color:'f87171',bold:true,align:'right',fontFace:'Meiryo' });
+    s.addText(item.title||'MC', { x:0.5,y:2,w:W-1,h:3,fontSize:S.fs.mcLarge,color:'FFFFFF',bold:true,align:'center',valign:'middle',fontFace:'Meiryo' });
+    if (item.exitNote) s.addText('⬇ '+item.exitNote, { x:0.4,y:H-1.1,w:W-0.8,h:0.44, fontSize:17,color:'f87171',bold:true,align:'right',fontFace:'Meiryo' });
+    seqBar(s, 0, 1, 'f97316');
+    return;
+  }
+
+  const blocks = parseMCBlocks(raw);
+  const total = blocks.length;
+  blocks.forEach((block, idx) => {
+    const s = pptxSlide(pptx, '06060f');
+
+    // Badge
+    s.addText('MC', { x:0.3,y:0.12,w:1.4,h:0.5, fontSize:16,color:'fb923c',bold:true,align:'left',fontFace:'Meiryo' });
+    s.addText(item.title||'MC', { x:1.8,y:0.12,w:W-2.1,h:0.5, fontSize:15,color:'555577',align:'left',fontFace:'Meiryo',italic:true });
+    if (block.section) s.addText('['+block.section+']', {
+      x:W*0.5,y:0.12,w:W*0.47,h:0.5,
+      fontSize:15,color:'b45309',align:'right',fontFace:'Meiryo'
+    });
+
+    // キッカケ + 入り指示 — first slide only
+    if (idx === 0) {
+      if (item.cue) {
+        s.addText('▶ ' + item.cue, {
+          x:0.3,y:0.68,w:W/2-0.4,h:0.5,
+          fontSize:17,color:'fdba74',bold:true,align:'left',fontFace:'Meiryo'
+        });
+      }
+      if (item.entryNote) {
+        s.addText('⬆ ' + item.entryNote, {
+          x:W/2+0.1,y:0.68,w:W/2-0.5,h:0.5,
+          fontSize:17,color:'f87171',bold:true,align:'right',fontFace:'Meiryo'
+        });
+      }
+    }
+
+    // ハケ指示 — last slide only
+    if (idx === total-1 && item.exitNote) {
+      s.addText('⬇ ' + item.exitNote, {
+        x:0.4,y:H-1.1,w:W-0.8,h:0.44,
+        fontSize:17,color:'f87171',bold:true,align:'right',fontFace:'Meiryo'
+      });
+    }
+
+    // MC本文 — 全行を1テキストボックスに統合（出演者色対応）
+    const n=block.lines.length, fs=fsMCBody(n);
+    const topY=0.78, botY=6.35;
+    const mcRuns = [];
+    block.lines.forEach((line, li) => {
+      const segs = (line.segments && line.segments.length > 0)
+        ? line.segments
+        : [{ text: line.text, color: line.color, highlight: line.highlight, highlightColor: line.highlightColor }];
+      segs.forEach((seg, si) => {
+        const isLastSeg = si === segs.length - 1;
+        const opts = { breakLine: isLastSeg && li < n-1 };
+        if (seg.color) opts.color = seg.color.replace('#','').padStart(6,'0').toUpperCase();
+        if (seg.highlight && seg.color) opts.highlight = (seg.highlightColor||seg.color).replace('#','').padStart(6,'0').toUpperCase();
+        mcRuns.push({ text: seg.text, options: opts });
+      });
+    });
+    s.addText(mcRuns, {
+      x:0.5,y:topY,w:W-1,h:botY-topY,
+      fontSize:fs,color:'F0F0FF',bold:false,
+      align:'center',valign:'middle',fontFace:'Meiryo',wrap:true,
+      lineSpacingMultiple: 1.4
+    });
+
+    s.addText(`${idx+1}  /  ${total}`, {
+      x:W*0.5,y:H-0.78,w:W*0.47,h:0.46,
+      fontSize:13,color:'3d3d5c',align:'right',fontFace:'Meiryo'
+    });
+    seqBar(s, idx, total, 'f97316');
+  });
+}
+
+// ── Video placeholder slide ──
+function addVideoSlide(pptx, item) {
+  const s = pptxSlide(pptx, '030310');
+
+  // 入り指示 (top-left)
+  if (item.entryNote) s.addText('⬆ '+item.entryNote, {
+    x:0.4,y:0.15,w:W/2-0.5,h:0.5,
+    fontSize:17,color:'f87171',bold:true,align:'left',fontFace:'Meiryo'
+  });
+  // ハケ指示 (top-right)
+  if (item.exitNote) s.addText('⬇ '+item.exitNote, {
+    x:W/2+0.1,y:0.15,w:W/2-0.5,h:0.5,
+    fontSize:17,color:'f87171',bold:true,align:'right',fontFace:'Meiryo'
+  });
+
+  s.addText('▶  映像演出', { x:0.4,y:2.0,w:W-0.8,h:0.7, fontSize:22,color:'38bdf8',bold:true,align:'center',fontFace:'Meiryo' });
+  s.addText(item.title||'映像', { x:0.4,y:2.8,w:W-0.8,h:2.0, fontSize:S.fs.titleCard,color:'FFFFFF',bold:true,align:'center',valign:'middle',fontFace:'Meiryo',wrap:true });
+  s.addText(fmtS(item.duration), { x:0.4,y:5.0,w:W-0.8,h:0.5, fontSize:22,color:'38bdf8',align:'center',fontFace:'Meiryo' });
+  if (item.description) s.addText(item.description, {
+    x:0.4,y:5.7,w:W-0.8,h:0.8,
+    fontSize:16,color:'555577',align:'center',fontFace:'Meiryo',wrap:true
+  });
+
+  // Blue seq bar
+  s.addShape(pptx_inst.ShapeType.rect, { x:0,y:H-0.18,w:W,h:0.18, fill:{color:'0a1520'},line:{color:'0a1520',width:0} });
+  s.addShape(pptx_inst.ShapeType.rect, { x:0,y:H-0.18,w:W,h:0.18, fill:{color:'0ea5e9'},line:{color:'0ea5e9',width:0} });
+}
+
+// ═══════════════════════════════════════════
+// SAVE HELPER — File System Access API 対応
+// ═══════════════════════════════════════════
+async function saveBlob(blob, suggestedName, mimeType, ext) {
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [{ description: ext.toUpperCase() + ' ファイル', accept: { [mimeType]: ['.' + ext] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch(e) {
+      if (e.name === 'AbortError') return false; // キャンセル
+      // 非対応環境はフォールバックへ
+    }
+  }
+  // フォールバック: 従来のダウンロード
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = suggestedName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  return true;
+}
+
+// ═══════════════════════════════════════════
+// GENERATE
+// ═══════════════════════════════════════════
+async function generateItemPPTX(id) {
+  const item = S.items.find(i => i.id === id);
+  if (!item) return;
+
+  try {
+    const pptx = new PptxGenJS();
+    pptx_inst = pptx;
+    pptx.layout = 'LAYOUT_WIDE';
+
+    if (item.type === 'song') {
+      if (item.titleCard) {
+        const s = pptxSlide(pptx);
+        addSongTitleCard(s, item, undefined, 0, 1);
+      }
+      addLyricsSlides(pptx, item, 0, 1);
+    } else if (item.type === 'mc') {
+      addMCSlides(pptx, item);
+    } else {
+      addVideoSlide(pptx, item);
+    }
+
+    const buf = await pptx.write('arraybuffer');
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+    const saved = await saveBlob(blob, `${item.title||'無題'}_プロンプター.pptx`, 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'pptx');
+    if (saved) showToast(`✅ ${item.title} の PPTX を保存しました`);
+  } catch(e) {
+    console.error(e);
+    showToast('❌ PPTX生成エラー: ' + e.message, 'err');
+  }
+}
+
+async function generateFullPPTX() {
+  if (!S.items.length) { showToast('⚠️ セットリストが空です','err'); return; }
+
+  const btn = document.getElementById('exportBtn');
+  btn.disabled = true;
+
+  try {
+    const pptx = new PptxGenJS();
+    pptx_inst = pptx;
+    pptx.layout = 'LAYOUT_WIDE';
+    const tc = timecodes();
+    const total = S.items.length;
+
+    S.items.forEach((item, idx) => {
+      if (item.type === 'song') {
+        if (item.titleCard) {
+          const s = pptxSlide(pptx);
+          addSongTitleCard(s, item, tc[idx], idx, total);
+        }
+        addLyricsSlides(pptx, item, idx, total);
+      } else if (item.type === 'mc') {
+        addMCSlides(pptx, item);
+      } else {
+        addVideoSlide(pptx, item);
+      }
+    });
+
+    const title = (document.getElementById('showTitle').value || '').trim() || 'ライブショー';
+    const buf = await pptx.write('arraybuffer');
+    const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+    const saved = await saveBlob(blob, `${title}_セットリストプロンプター.pptx`, 'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'pptx');
+    if (saved) showToast(`✅ ${total} 演目 / 全体 PPTX を保存しました`);
+  } catch(e) {
+    console.error(e);
+    showToast('❌ エラー: '+e.message, 'err');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ═══════════════════════════════════════════
+// EXCEL EXPORT
+// ═══════════════════════════════════════════
+
+// Helper: safely apply style to a cell (creates cell if missing)
+function xStyle(ws, r, c, style) {
+  const ref = XLSX.utils.encode_cell({r, c});
+  if (!ws[ref]) ws[ref] = {v: '', t: 's'};
+  ws[ref].s = style;
+}
+
+// Palette
+const XL = {
+  purple:    '4f46e5',
+  purpleDk:  '1e1e5a',
+  purpleLt:  'ede9fe',
+  songBg:    'dcfce7',
+  songText:  '14532d',
+  mcBg:      'ffedd5',
+  mcText:    '7c2d12',
+  videoBg:   'e0f2fe',
+  videoText: '0c4a6e',
+  altBg:     'f8f8ff',
+  hdrText:   'FFFFFF',
+  darkText:  '111111',
+  mutedText: '555577',
+  totalBg:   'ede9fe',
+};
+
+function rowBg(type, isAlt) {
+  if (!isAlt) {
+    if (type === 'song')  return XL.songBg;
+    if (type === 'mc')    return XL.mcBg;
+    if (type === 'video') return XL.videoBg;
+  }
+  return XL.altBg;
+}
+
+function typeText(type) {
+  if (type === 'song')  return XL.songText;
+  if (type === 'mc')    return XL.mcText;
+  if (type === 'video') return XL.videoText;
+  return XL.darkText;
+}
+
+async function generateExcel() {
+  if (!S.items.length) { showToast('⚠️ セットリストが空です', 'err'); return; }
+
+  const showTitle = document.getElementById('showTitle').value || 'ライブショー';
+  const tc = timecodes();
+  const dur = totalDur();
+  const today = new Date().toLocaleDateString('ja-JP',
+    {year:'numeric', month:'2-digit', day:'2-digit'});
+
+  const wb = XLSX.utils.book_new();
+
+  // ─────────────────────────────────────────
+  // Sheet 1: セットリスト
+  // ─────────────────────────────────────────
+  const rows = [];
+  rows.push([showTitle, '', '', '', '', '', '']);                                  // R0: タイトル
+  rows.push([`作成日: ${today}`, '', '', '', '', '', `合計時間: ${fmtL(dur)}`]);  // R1: サブタイトル
+  rows.push(['', '', '', '', '', '', '']);                                         // R2: 空白
+  rows.push(['No.', 'タイプ', 'タイトル', '開始時刻', '長さ', 'メモ・備考', 'ステージ指示 / キッカケ']); // R3: ヘッダー
+
+  S.items.forEach((item, idx) => {
+    let notes = '';
+    // 楽曲は歌詞をメモ欄に入れない（長くなりすぎるため）
+    if (item.type === 'mc')    notes = (item.script||'').replace(/\n+/g,' ／ ').substring(0, 120);
+    if (item.type === 'video') notes = (item.description||'');
+    const stageParts = [];
+    if (item.type !== 'video' && cueLabel(item)) stageParts.push('▶ ' + cueLabel(item));
+    if (item.entryNote) stageParts.push('⬆ 入り: ' + item.entryNote);
+    if (item.exitNote)  stageParts.push('⬇ ハケ: ' + item.exitNote);
+    const stageInfo = stageParts.join('\n');
+    rows.push([idx + 1, LABELS[item.type], item.title||'', fmtStart(tc[idx]), fmtS(item.duration), notes, stageInfo]);
+  });
+
+  rows.push(['', '', '', '', '', '', '']);              // 空白
+  rows.push(['', '', '合計時間', '', fmtL(dur), '', '']); // 合計
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // 列幅
+  ws['!cols'] = [{wch:6},{wch:10},{wch:28},{wch:10},{wch:8},{wch:40},{wch:30}];
+  // 行高
+  ws['!rows'] = [
+    {hpx:34}, {hpx:18}, {hpx:8}, {hpx:26},
+    ...S.items.map(() => ({hpx: 22})),
+    {hpx:8}, {hpx:24}
+  ];
+  // セル結合: タイトル行 A1:G1
+  ws['!merges'] = [{s:{r:0,c:0}, e:{r:0,c:6}}];
+
+  // ── スタイル適用 ──
+
+  // R0: タイトル
+  xStyle(ws, 0, 0, {
+    font: {bold:true, sz:16, color:{rgb:XL.hdrText}},
+    fill: {patternType:'solid', fgColor:{rgb:XL.purple}},
+    alignment: {horizontal:'left', vertical:'center', indent:1}
+  });
+
+  // R1: サブタイトル
+  xStyle(ws, 1, 0, {font:{sz:10, color:{rgb:XL.mutedText}}, alignment:{horizontal:'left', vertical:'center'}});
+  xStyle(ws, 1, 6, {font:{sz:10, bold:true, color:{rgb:XL.purple}}, alignment:{horizontal:'right', vertical:'center'}});
+
+  // R3: ヘッダー行
+  ['No.','タイプ','タイトル','開始時刻','長さ','メモ・備考','ステージ指示 / キッカケ'].forEach((_, ci) => {
+    xStyle(ws, 3, ci, {
+      font: {bold:true, sz:11, name:'Arial', color:{rgb:XL.hdrText}},
+      fill: {patternType:'solid', fgColor:{rgb:XL.purpleDk}},
+      alignment: {horizontal:'center', vertical:'center', wrapText:false},
+      border: {bottom:{style:'medium', color:{rgb:XL.purple}}}
+    });
+  });
+
+  // R4以降: データ行
+  S.items.forEach((item, idx) => {
+    const r = 4 + idx;
+    const isAlt = idx % 2 !== 0;
+    const bg  = rowBg(item.type, isAlt);
+    const txt = isAlt ? XL.darkText : typeText(item.type);
+
+    for (let ci = 0; ci < 7; ci++) {
+      xStyle(ws, r, ci, {
+        font: {sz:11, name:'Arial', color:{rgb: ci===2 ? XL.darkText : txt}, bold: ci===2},
+        fill: {patternType:'solid', fgColor:{rgb:bg}},
+        alignment: {
+          horizontal: ci===0||ci===3||ci===4 ? 'center' : 'left',
+          vertical: 'center',
+          wrapText: ci===5||ci===6
+        },
+        border: {
+          top:    {style:'thin', color:{rgb:'e5e7eb'}},
+          bottom: {style:'thin', color:{rgb:'e5e7eb'}},
+          left:   {style:'thin', color:{rgb:'e5e7eb'}},
+          right:  {style:'thin', color:{rgb:'e5e7eb'}}
+        }
+      });
+    }
+  });
+
+  // 合計行
+  const totR = 4 + S.items.length + 1;
+  xStyle(ws, totR, 2, {
+    font: {bold:true, sz:12, name:'Arial', color:{rgb:XL.purpleDk}},
+    fill: {patternType:'solid', fgColor:{rgb:XL.totalBg}},
+    alignment: {horizontal:'right', vertical:'center'}
+  });
+  xStyle(ws, totR, 4, {
+    font: {bold:true, sz:14, name:'Arial', color:{rgb:XL.purple}},
+    fill: {patternType:'solid', fgColor:{rgb:XL.totalBg}},
+    alignment: {horizontal:'center', vertical:'center'}
+  });
+  [0,1,3,5,6].forEach(ci => xStyle(ws, totR, ci, {fill:{patternType:'solid', fgColor:{rgb:XL.totalBg}}}));
+
+  XLSX.utils.book_append_sheet(wb, ws, 'セットリスト');
+
+  // ─────────────────────────────────────────
+  // Sheet 2: 演目詳細メモ
+  // ─────────────────────────────────────────
+  const rows2 = [];
+  rows2.push([showTitle + ' — 演目詳細メモ', '', '']);
+  rows2.push([`作成日: ${today}`, '', '']);
+  rows2.push(['', '', '']);
+
+  S.items.forEach((item, idx) => {
+    // 見出し行
+    rows2.push([
+      `${(idx+1).toString().padStart(2,'0')}. ${ICONS[item.type]} ${item.title||''}`,
+      `開始: ${fmtStart(tc[idx])}`,
+      `長さ: ${fmtS(item.duration)}`
+    ]);
+
+    // コンテンツ
+    const content =
+      item.type === 'song'  ? (item.lyrics||'').trim() :
+      item.type === 'mc'    ? (item.script||'').trim() :
+      (item.description||'').trim();
+
+    if (content) {
+      content.split('\n').forEach(line => {
+        rows2.push(['', line || '', '']);
+      });
+    } else {
+      rows2.push(['', '（内容未入力）', '']);
+    }
+    rows2.push(['', '', '']); // 区切り
+  });
+
+  const ws2 = XLSX.utils.aoa_to_sheet(rows2);
+  ws2['!cols'] = [{wch:36},{wch:60},{wch:14}];
+  ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}}];
+
+  // Sheet2 スタイル
+  xStyle(ws2, 0, 0, {
+    font:{bold:true, sz:14, color:{rgb:XL.hdrText}},
+    fill:{patternType:'solid', fgColor:{rgb:XL.purple}},
+    alignment:{horizontal:'left', vertical:'center', indent:1}
+  });
+  xStyle(ws2, 1, 0, {font:{sz:10, color:{rgb:XL.mutedText}}});
+
+  // 各演目の見出し行をスタイリング
+  let r2 = 3;
+  S.items.forEach((item) => {
+    const bg = item.type==='song' ? XL.songBg : item.type==='mc' ? XL.mcBg : XL.videoBg;
+    const tx = typeText(item.type);
+    for (let ci=0; ci<3; ci++) {
+      xStyle(ws2, r2, ci, {
+        font:{bold:true, sz:11, name:'Arial', color:{rgb: ci===0 ? tx : XL.mutedText}},
+        fill:{patternType:'solid', fgColor:{rgb:bg}},
+        alignment:{horizontal: ci===0 ? 'left' : 'center', vertical:'center'}
+      });
+    }
+
+    const lines = (
+      item.type==='song'  ? (item.lyrics||'') :
+      item.type==='mc'    ? (item.script||'') :
+      (item.description||'')
+    ).trim().split('\n');
+    const lineCount = lines.length || 1;
+
+    for (let li=0; li<lineCount; li++) {
+      xStyle(ws2, r2+1+li, 1, {
+        font:{sz:11, name:'Arial', color:{rgb: XL.darkText}},
+        alignment:{wrapText:false, vertical:'center', horizontal:'left'}
+      });
+    }
+    r2 += lineCount + 2; // 見出し + コンテンツ + 空白
+  });
+
+  XLSX.utils.book_append_sheet(wb, ws2, '演目詳細メモ');
+
+  // ─────────────────────────────────────────
+  // ダウンロード
+  // ─────────────────────────────────────────
+  const fileName = `${showTitle}_セットリスト.xlsx`;
+  const buf = XLSX.write(wb, { bookType: 'xlsx', type: 'array', cellStyles: true });
+  const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const saved = await saveBlob(blob, fileName, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'xlsx');
+  if (saved) showToast(`📊 ${fileName} を保存しました`);
+}
+
+// ═══════════════════════════════════════════
+// PREVIEW MODAL
+// ═══════════════════════════════════════════
+let _pvSlides = [], _pvIdx = 0;
+
+// Convert PPTX inch-based coords to CSS percentages
+const px = (inch, total) => (inch / total * 100).toFixed(3) + '%';
+const pt2cqw = pt => (pt / 72 / 13.33 * 100).toFixed(3) + 'cqw';
+
+function pvEl(text, {x, y, w, h, fontSize, color, bold, align, italic, lineH} = {}) {
+  const clr = (color||'ffffff').replace('#','');
+  const c = '#' + clr;
+  const a = align || 'center';
+  const lh = lineH || 1.45;
+  return `<div class="pv-el ${a}" style="
+    left:${px(x||0, 13.33)};top:${px(y||0, 7.5)};
+    width:${px(w||13.33, 13.33)};height:${px(h||0.5, 7.5)};
+    font-size:${pt2cqw(fontSize||14)};color:${c};
+    font-weight:${bold?'800':'400'};
+    font-style:${italic?'italic':'normal'};
+    line-height:${lh};
+    white-space:pre-wrap;word-break:break-all;overflow:hidden;
+  ">${text}</div>`;
+}
+
+function pvBar(idx, total, color) {
+  const pct = ((idx + 1) / total * 100).toFixed(2) + '%';
+  return `<div class="pv-seqbar" style="width:${pct};color:${color||'#5eab7a'};"></div>`;
+}
+
+function buildPreviewSlides(item) {
+  const slides = [];
+  const W = 13.33, H = 7.5;
+
+  if (item.type === 'song') {
+    // ① Title card
+    const cue = item.cueType === 'titlecall' ? item.title : (item.cueType === 'custom' ? item.cueCustom : null);
+    let tc = `<div class="pv-slide" style="background:linear-gradient(160deg,#05050f,#09092a);">`;
+    if (cue) tc += pvEl('▶ ' + cue, {x:0.4,y:0.65,w:W/2-0.55,h:0.48,fontSize:17,color:'8b8df5',bold:true,align:'left'});
+    if (item.entryNote) tc += pvEl('⬆ ' + item.entryNote, {x:W/2+0.15,y:0.65,w:W/2-0.55,h:0.48,fontSize:17,color:'f87171',bold:true,align:'right'});
+    tc += pvEl(item.title||'無題', {x:0.5,y:1.5,w:W-1,h:3.5,fontSize:S.fs.titleCard,color:'ffffff',bold:true,align:'center'});
+    tc += pvBar(0, 1, '#22c55e');
+    tc += `</div>`;
+    slides.push({ label: 'タイトルカード', html: tc });
+
+    // ② Lyric slides
+    const allSlides = parseLyrics(item.lyrics || '', item.maxLines || S.defMaxLines);
+    const tot = allSlides.length;
+    allSlides.forEach((slide, idx) => {
+      const n = slide.lines.length;
+      const fs = fsLyrics(n);
+      let s = `<div class="pv-slide" style="background:linear-gradient(160deg,#030310,#080820);">`;
+      if (slide.section) s += pvEl(slide.section, {x:W*0.5,y:0.12,w:W*0.47,h:0.48,fontSize:16,color:'555577',align:'right',italic:true});
+      s += pvEl(item.title||'', {x:0.3,y:0.12,w:W*0.47,h:0.48,fontSize:15,color:'444466',align:'left',italic:true});
+
+      // colored lyrics lines（インライン色変更対応）
+      const topY = n <= 2 ? 1.8 : n <= 3 ? 1.4 : 0.85;
+      const botY = 6.35;
+      const lineH = n <= 2 ? 1.8 : n <= 3 ? 1.6 : 1.5;
+      let lyricHtml = slide.lines.map(line => {
+        const segs = (line.segments && line.segments.length > 0)
+          ? line.segments
+          : [{ text: line.text, color: line.color, highlight: line.highlight, highlightColor: line.highlightColor }];
+        const innerHtml = segs.map(seg => {
+          const c = (seg.color||'#ffffff').replace('#','');
+          if (seg.highlight && seg.color) {
+            const hlc = (seg.highlightColor||seg.color).replace('#','');
+            return `<span style="background:#${hlc};color:#${c};border-radius:3px;padding:0 3px;">${esc(seg.text)}</span>`;
+          }
+          return `<span style="color:#${c};">${esc(seg.text)}</span>`;
+        }).join('');
+        return `<span style="display:block;">${innerHtml}</span>`;
+      }).join('');
+      s += `<div class="pv-el center" style="
+        left:${px(0.4,W)};top:${px(topY,H)};
+        width:${px(W-0.8,W)};height:${px(botY-topY,H)};
+        font-size:${pt2cqw(fs)};font-weight:800;
+        line-height:${lineH};
+        white-space:pre-wrap;word-break:break-all;
+        display:flex;flex-direction:column;align-items:center;justify-content:center;
+      ">${lyricHtml}</div>`;
+
+      if (idx === tot-1 && item.exitNote) {
+        s += pvEl('⬇ ' + item.exitNote, {x:0.3,y:6.38,w:W-0.6,h:0.3,fontSize:14,color:'f87171',bold:true,align:'right'});
+      }
+      s += pvEl(item.title||'', {x:0.3,y:H-0.78,w:W*0.5,h:0.46,fontSize:13,color:'3d3d5c',align:'left',italic:true});
+      s += pvEl(`${idx+1}  /  ${tot}`, {x:W*0.5,y:H-0.78,w:W*0.47,h:0.46,fontSize:13,color:'3d3d5c',align:'right'});
+      s += pvBar(idx, tot, '#22c55e');
+      s += `</div>`;
+      slides.push({ label: `歌詞 ${idx+1}/${tot}`, html: s });
+    });
+
+    if (slides.length === 1) slides.push({ label: '歌詞なし', html: `<div class="pv-slide" style="background:#030310;display:flex;align-items:center;justify-content:center;"><span style="color:#444466;font-size:${pt2cqw(18)};">歌詞が未入力です</span></div>` });
+
+  } else if (item.type === 'mc') {
+    const raw = (item.script || '').trim();
+    if (!raw) {
+      // タイトルのみ
+      let s = `<div class="pv-slide" style="background:linear-gradient(160deg,#06060f,#0f0f1e);">`;
+      s += pvEl('MC', {x:0.3,y:0.15,w:2,h:0.5,fontSize:17,color:'fb923c',bold:true,align:'left'});
+      if (item.cue) s += pvEl('▶ '+item.cue, {x:0.3,y:0.68,w:W/2-0.4,h:0.5,fontSize:17,color:'fdba74',bold:true,align:'left'});
+      if (item.entryNote) s += pvEl('⬆ '+item.entryNote, {x:W/2+0.1,y:0.68,w:W/2-0.5,h:0.5,fontSize:17,color:'f87171',bold:true,align:'right'});
+      s += pvEl(item.title||'MC', {x:0.5,y:2,w:W-1,h:3,fontSize:S.fs.mcLarge,color:'ffffff',bold:true,align:'center'});
+      if (item.exitNote) s += pvEl('⬇ '+item.exitNote, {x:0.4,y:H-1.1,w:W-0.8,h:0.44,fontSize:17,color:'f87171',bold:true,align:'right'});
+      s += pvBar(0, 1, '#f97316');
+      s += `</div>`;
+      slides.push({ label: 'MCタイトル', html: s });
+    } else {
+      const blocks = parseMCBlocks(raw);
+      const tot = blocks.length;
+      blocks.forEach((block, idx) => {
+        let s = `<div class="pv-slide" style="background:linear-gradient(160deg,#06060f,#0f0f1e);">`;
+        s += pvEl('MC', {x:0.3,y:0.12,w:1.4,h:0.5,fontSize:16,color:'fb923c',bold:true,align:'left'});
+        s += pvEl(item.title||'MC', {x:1.8,y:0.12,w:W-2.1,h:0.5,fontSize:15,color:'555577',align:'left',italic:true});
+        if (idx === 0) {
+          if (item.cue) s += pvEl('▶ '+item.cue, {x:0.3,y:0.68,w:W/2-0.4,h:0.5,fontSize:17,color:'fdba74',bold:true,align:'left'});
+          if (item.entryNote) s += pvEl('⬆ '+item.entryNote, {x:W/2+0.1,y:0.68,w:W/2-0.5,h:0.5,fontSize:17,color:'f87171',bold:true,align:'right'});
+        }
+        if (idx === tot-1 && item.exitNote) s += pvEl('⬇ '+item.exitNote, {x:0.4,y:H-1.1,w:W-0.8,h:0.44,fontSize:17,color:'f87171',bold:true,align:'right'});
+        const n = block.lines.length;
+        const fs = fsMCBody(n);
+        const topY = 0.78, botY = 6.35, lineH = n<=2?1.7:n<=3?1.55:1.4;
+        let mcHtml = block.lines.map(line => {
+          const segs = (line.segments && line.segments.length > 0)
+            ? line.segments
+            : [{ text: line.text, color: line.color, highlight: line.highlight, highlightColor: line.highlightColor }];
+          const inner = segs.map(seg => {
+            const c = seg.color ? seg.color.replace('#','') : null;
+            if (seg.highlight && seg.color) {
+              const hlc = (seg.highlightColor||seg.color).replace('#','');
+              return `<span style="background:#${hlc};color:#${c};border-radius:3px;padding:0 3px;">${esc(seg.text)}</span>`;
+            }
+            if (c) return `<span style="color:#${c};">${esc(seg.text)}</span>`;
+            return `<span>${esc(seg.text)}</span>`;
+          }).join('');
+          return `<span style="display:block;">${inner}</span>`;
+        }).join('');
+        s += `<div class="pv-el center" style="
+          left:${px(0.5,W)};top:${px(topY,H)};
+          width:${px(W-1,W)};height:${px(botY-topY,H)};
+          font-size:${pt2cqw(fs)};color:#f0f0ff;
+          line-height:${lineH};
+          white-space:pre-wrap;word-break:break-all;
+          display:flex;flex-direction:column;align-items:center;justify-content:center;
+        ">${mcHtml}</div>`;
+        s += pvEl(`${idx+1}  /  ${tot}`, {x:W*0.5,y:H-0.78,w:W*0.47,h:0.46,fontSize:13,color:'3d3d5c',align:'right'});
+        s += pvBar(idx, tot, '#f97316');
+        s += `</div>`;
+        slides.push({ label: `スライド ${idx+1}/${tot}`, html: s });
+      });
+    }
+  } else if (item.type === 'video') {
+    let s = `<div class="pv-slide" style="background:linear-gradient(160deg,#030310,#030710);">`;
+    if (item.entryNote) s += pvEl('⬆ '+item.entryNote, {x:0.4,y:0.15,w:W/2-0.5,h:0.5,fontSize:17,color:'f87171',bold:true,align:'left'});
+    if (item.exitNote) s += pvEl('⬇ '+item.exitNote, {x:W/2+0.1,y:0.15,w:W/2-0.5,h:0.5,fontSize:17,color:'f87171',bold:true,align:'right'});
+    s += pvEl('▶  映像演出', {x:0.4,y:2.0,w:W-0.8,h:0.7,fontSize:22,color:'38bdf8',bold:true,align:'center'});
+    s += pvEl(item.title||'映像', {x:0.4,y:2.8,w:W-0.8,h:2.0,fontSize:S.fs.titleCard,color:'ffffff',bold:true,align:'center'});
+    s += pvEl(fmtS(item.duration), {x:0.4,y:5.0,w:W-0.8,h:0.5,fontSize:22,color:'38bdf8',align:'center'});
+    s += pvBar(0, 1, '#0ea5e9');
+    s += `</div>`;
+    slides.push({ label: '映像スライド', html: s });
+  }
+
+  return slides;
+}
+
+function openPreview(itemId) {
+  const item = S.items.find(i => i.id === itemId);
+  if (!item) return;
+  _pvSlides = buildPreviewSlides(item);
+  _pvIdx = 0;
+  document.getElementById('pvTitle').textContent = item.title || 'プレビュー';
+  pvRender();
+  document.getElementById('previewModal').classList.add('open');
+}
+
+function pvRender() {
+  const total = _pvSlides.length;
+  document.getElementById('pvCount').textContent = `${_pvIdx+1} / ${total}`;
+  document.getElementById('pvPrev').disabled = _pvIdx === 0;
+  document.getElementById('pvNext').disabled = _pvIdx === total - 1;
+  // Use the persistent .pv-stage-wrap container (avoids null ref after innerHTML swap)
+  document.querySelector('.pv-stage-wrap').innerHTML = _pvSlides[_pvIdx].html;
+}
+
+function pvGo(dir) {
+  if (!_pvSlides.length) return;
+  _pvIdx = Math.max(0, Math.min(_pvSlides.length - 1, _pvIdx + dir));
+  pvRender();
+}
+
+function closePreview() {
+  document.getElementById('previewModal').classList.remove('open');
+}
+
+// ═══════════════════════════════════════════
+// HELP MODAL
+// ═══════════════════════════════════════════
+function showHelp() {
+  document.getElementById('helpModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeHelp() {
+  document.getElementById('helpModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+document.addEventListener('keydown', e => {
+  if (document.getElementById('helpModal').classList.contains('open')) {
+    if (e.key === 'Escape') closeHelp();
+    return;
+  }
+  const modal = document.getElementById('previewModal');
+  if (!modal.classList.contains('open')) return;
+  if (e.key === 'Escape') closePreview();
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') pvGo(+1);
+  if (e.key === 'ArrowLeft'  || e.key === 'ArrowUp')   pvGo(-1);
+});
+
+// ═══════════════════════════════════════════
+// TIMER POPUP
+// ═══════════════════════════════════════════
+function openTimer(itemId) {
+  const item = S.items.find(i => i.id === itemId);
+  if (!item || !item.duration) return;
+
+  const dur   = item.duration;
+  const label = esc(item.title || 'タイマー');
+  const type  = item.type; // 'song'|'mc'|'video'
+  const accent = type === 'mc' ? '#c9a84c' : type === 'video' ? '#5090b0' : '#5eab7a';
+
+  const html = `<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>⏱ ${label}</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--accent:${accent};}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Meiryo',sans-serif;
+  background:#08081a;color:#e0e0f5;
+  height:100vh;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:20px;
+  overflow:hidden;transition:background .6s;
+  user-select:none;
+}
+body.warn{background:#16110a;}
+body.over{background:#160808;}
+
+.lbl{font-size:17px;color:#55557a;font-weight:600;letter-spacing:.02em;text-align:center;max-width:90%;}
+.type-badge{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+  padding:3px 10px;border-radius:3px;background:rgba(201,168,76,.1);color:var(--accent);
+  margin-bottom:4px;display:inline-block;}
+
+.display{
+  font-size:120px;font-weight:900;letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums;color:#ffffff;line-height:1;
+  text-align:center;transition:color .4s;
+}
+body.warn  .display{color:#fbbf24;}
+body.over  .display{color:#f87171;}
+
+.overtime-lbl{font-size:16px;font-weight:700;color:#f87171;letter-spacing:.1em;
+  text-transform:uppercase;opacity:0;transition:opacity .3s;height:22px;}
+body.over .overtime-lbl{opacity:1;}
+
+.progress-wrap{width:75%;height:8px;background:#1a1a30;border-radius:4px;overflow:hidden;}
+.progress-bar{height:100%;border-radius:4px;transition:width .9s linear,background .5s;
+  background:var(--accent);}
+body.warn .progress-bar{background:#fbbf24;}
+body.over .progress-bar{background:#f87171;width:100% !important;}
+
+.btns{display:flex;gap:10px;}
+.btn{font-size:15px;font-weight:700;padding:12px 28px;border-radius:4px;
+  border:none;cursor:pointer;font-family:inherit;transition:all .15s;}
+.btn-start{background:var(--accent);color:#fff;}
+.btn-start:hover{opacity:.85;}
+.btn-pause{background:#2a2a40;color:#a0a0c0;border:1px solid #3a3a5a;}
+.btn-pause:hover{background:#33334a;}
+.btn-reset{background:transparent;color:#55557a;border:1px solid #252545;font-size:13px;padding:12px 20px;}
+.btn-reset:hover{border-color:var(--accent);color:var(--accent);}
+
+.dur-hint{font-size:12px;color:#33334a;margin-top:4px;}
+</style>
+</head>
+<body>
+<div>
+  <div class="type-badge">${type === 'mc' ? '🎤 MC' : type === 'video' ? '🎬 映像演出' : '🎵 楽曲'}</div>
+  <div class="lbl">${label}</div>
+</div>
+
+<div class="display" id="disp">0:00</div>
+<div class="overtime-lbl" id="overLbl">overtime</div>
+
+<div class="progress-wrap">
+  <div class="progress-bar" id="bar" style="width:100%"></div>
+</div>
+
+<div class="btns">
+  <button class="btn btn-start" id="btnMain" onclick="toggle()">▶ スタート</button>
+  <button class="btn btn-reset" onclick="reset()">↺ リセット</button>
+</div>
+<div class="dur-hint" id="durHint">設定時間: ${Math.floor(dur/60)}分${dur%60?dur%60+'秒':''}</div>
+
+<script>
+const TOTAL = ${dur};
+let remaining = TOTAL;
+let running   = false;
+let iv        = null;
+
+function fmt(s) {
+  const abs = Math.abs(Math.floor(s));
+  const m = Math.floor(abs / 60), sec = abs % 60;
+  return (s < 0 ? '-' : '') + m + ':' + String(sec).padStart(2, '0');
+}
+
+function render() {
+  document.getElementById('disp').textContent = fmt(remaining);
+  const pct = Math.max(0, remaining / TOTAL * 100);
+  document.getElementById('bar').style.width = pct + '%';
+
+  if (remaining < 0) {
+    document.body.className = 'over';
+  } else if (remaining <= 30) {
+    document.body.className = 'warn';
+  } else {
+    document.body.className = '';
+  }
+}
+
+function toggle() {
+  const btn = document.getElementById('btnMain');
+  if (!running) {
+    running = true;
+    btn.textContent = '⏸ 一時停止';
+    btn.className = 'btn btn-pause';
+    iv = setInterval(() => { remaining--; render(); }, 1000);
+  } else {
+    running = false;
+    btn.textContent = '▶ 再開';
+    btn.className = 'btn btn-start';
+    clearInterval(iv);
+  }
+}
+
+function reset() {
+  clearInterval(iv);
+  running = false;
+  remaining = TOTAL;
+  const btn = document.getElementById('btnMain');
+  btn.textContent = '▶ スタート';
+  btn.className = 'btn btn-start';
+  render();
+}
+
+render();
+<\/script>
+</body>
+</html>`;
+
+  const win = window.open('', 'timer_' + itemId,
+    'width=540,height=460,menubar=no,toolbar=no,status=no,resizable=yes');
+  if (!win) { showToast('⚠️ ポップアップがブロックされました。許可してください', 'err'); return; }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
+// ═══════════════════════════════════════════
+// EXPORT / IMPORT PROJECT (JSON)
+// ═══════════════════════════════════════════
+async function exportProject() {
+  const showTitle = document.getElementById('showTitle').value || '';
+  const payload = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    showTitle,
+    defMaxLines: S.defMaxLines,
+    showStart: S.showStart,
+    fs: S.fs,
+    performers: S.performers,
+    items: S.items
+  };
+  const json = JSON.stringify(payload, null, 2);
+  const safe = (showTitle.trim() || 'setlist').replace(/[\\/:*?"<>|]/g, '_').trim() || 'setlist';
+  const ts   = new Date().toISOString().slice(0,10);
+  const defaultName = `${safe}_${ts}.slm.json`;
+
+  // File System Access API: 保存先を選べるダイアログ（対応環境のみ）
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: defaultName,
+        types: [{
+          description: 'セットリストプロジェクト',
+          accept: { 'application/json': ['.json'] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(json);
+      await writable.close();
+      showToast('💾 保存しました');
+      return; // 成功したら終了
+    } catch(e) {
+      if (e.name === 'AbortError') return; // キャンセル → 何もしない
+      // それ以外のエラー（SecurityError など）→ ダウンロード方式にフォールバック
+    }
+  }
+
+  // フォールバック: ブラウザのダウンロード方式
+  try {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = defaultName;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('💾 プロジェクトを保存しました');
+  } catch(e) {
+    showToast('⚠️ 保存に失敗しました: ' + e.message, 'err');
+  }
+}
+
+function importProject() {
+  const input = document.createElement('input');
+  input.type  = 'file';
+  input.accept= '.json,.slm.json';
+  input.onchange = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (!d.version || !Array.isArray(d.items)) {
+          showToast('⚠️ 有効なセットリストファイルではありません', 'err');
+          return;
+        }
+        // Confirm if data already exists
+        if (S.items.length > 0) {
+          if (!confirm('現在のプロジェクトを破棄して読み込みますか？\n（この操作は元に戻せません）')) return;
+        }
+        // Load data
+        S.items      = d.items.map(migrateItem);
+        S.performers = d.performers || [];
+        S.defMaxLines= d.defMaxLines || 4;
+        if (d.showStart !== undefined) S.showStart = d.showStart;
+        if (d.fs) S.fs = Object.assign({lyricsBase:48,titleCard:58,mcLarge:54,mcBodyBase:32}, d.fs);
+        S.selectedId = S.items[0]?.id || null;
+        pcIdx        = S.performers.length;
+        const titleEl = document.getElementById('showTitle');
+        if (titleEl && d.showTitle) titleEl.value = d.showTitle;
+        rebuildCPs();
+        renderList();
+        renderEditor();
+        saveState();
+        showToast(`📂 「${d.showTitle || 'プロジェクト'}」を読み込みました`);
+      } catch(err) {
+        showToast('⚠️ ファイルの読み込みに失敗しました: ' + err.message, 'err');
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+  };
+  input.click();
+}
+
+// ═══════════════════════════════════════════
+// TOAST & INIT
+// ═══════════════════════════════════════════
+function showToast(msg, type='ok') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type==='err'?' err':'');
+  setTimeout(() => el.className = 'toast', 3500);
+}
+
+const _restored = loadState();
+rebuildCPs();
+renderList();
+renderEditor();
+if (_restored && S.items.length) showToast('💾 前回の公演データを復元しました');
+</script>
+</body>
+</html>
